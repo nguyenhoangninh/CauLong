@@ -51,7 +51,7 @@
         <div class="header-controls">
             <div class="week-selector">
                 <label><strong>Kỳ tính toán: </strong></label>
-                <select id="monthSelect" onchange="loadData()">
+                <select id="monthSelect" onchange="switchPeriod()">
                     <option value="1">Tháng 1</option>
                     <option value="2">Tháng 2</option>
                     <option value="3">Tháng 3</option>
@@ -65,7 +65,7 @@
                     <option value="11">Tháng 11</option>
                     <option value="12">Tháng 12</option>
                 </select>
-                <select id="weekSelect" onchange="loadData()">
+                <select id="weekSelect" onchange="switchPeriod()">
                     <option value="1">Tuần 1</option>
                     <option value="2">Tuần 2</option>
                     <option value="3">Tuần 3</option>
@@ -75,16 +75,16 @@
             </div>
             <div class="input-group">
                 <label>Phí tạm thu/buổi (VNĐ): &nbsp;</label>
-                <input type="number" id="feePerSession" value="50000">
+                <input type="text" id="feePerSession" value="50,000" oninput="formatInput(this)">
             </div>
         </div>
 
         <div class="cost-section">
             <div class="cost-box">
                 <h3>Chi phí Thứ 7</h3>
-                <div class="input-group"><label>Tiền sân:</label><input type="number" id="sanT7" value="330000"></div>
-                <div class="input-group"><label>Tiền cầu:</label><input type="number" id="cauT7" value="48000"></div>
-                <div class="input-group"><label>Chi phí khác:</label><input type="number" id="khacT7" value="0"></div>
+                <div class="input-group"><label>Tiền sân:</label><input type="text" id="sanT7" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Tiền cầu:</label><input type="text" id="cauT7" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Chi phí khác:</label><input type="text" id="khacT7" value="0" oninput="formatInput(this)"></div>
                 <div class="input-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
                     <label>Tổng T7:</label><strong id="tongT7" style="color: #0284c7;">0</strong>
                 </div>
@@ -92,9 +92,9 @@
 
             <div class="cost-box">
                 <h3>Chi phí Chủ Nhật</h3>
-                <div class="input-group"><label>Tiền sân:</label><input type="number" id="sanCN" value="160000"></div>
-                <div class="input-group"><label>Tiền cầu:</label><input type="number" id="cauCN" value="48000"></div>
-                <div class="input-group"><label>Chi phí khác:</label><input type="number" id="khacCN" value="0"></div>
+                <div class="input-group"><label>Tiền sân:</label><input type="text" id="sanCN" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Tiền cầu:</label><input type="text" id="cauCN" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Chi phí khác:</label><input type="text" id="khacCN" value="0" oninput="formatInput(this)"></div>
                 <div class="input-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
                     <label>Tổng CN:</label><strong id="tongCN" style="color: #b91c1c;">0</strong>
                 </div>
@@ -124,13 +124,12 @@
                         <th rowspan="2">Xung Quỹ</th>
                     </tr>
                     <tr>
-                        <th>Dự kiến</th><th class="col-group">Thực tế</th>
+                        <th>Dự kiến</th><th>Thực tế</th>
                         <th>Dự kiến</th><th class="col-group">Thực tế</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Dữ liệu render bằng JS -->
-                </tbody>
+                    </tbody>
             </table>
         </div>
 
@@ -144,18 +143,44 @@
     </div>
 
     <script>
-        // Danh sách thành viên gốc (sẽ được cập nhật khi bạn thêm/xóa)
         let globalMembers = ["C Thúy", "A Tâm", "Henry", "C Thảo", "A Chinh", "Hiếu", "Khánh", "Phương", "Quý", "Kiệt", "Vi", "Ninh", "C Tuyết"];
-        
         let appData = { records: {} };
-        let currentKey = '1_1'; // Format: thang_tuan
+        let currentKey = '1_1';
 
-        // Hàm format tiền tệ (Sử dụng 'en-US' để có dấu phẩy ,)
         const formatVND = (num) => Math.round(num).toLocaleString('en-US');
-        const parseNum = (val) => parseInt(val) || 0;
+        
+        // Hàm chuyển đổi chuỗi có dấu phẩy thành số thuần túy để tính toán
+        const parseNum = (val) => {
+            if (!val) return 0;
+            if (typeof val === 'string') {
+                return parseInt(val.replace(/[^0-9]/g, '')) || 0;
+            }
+            return parseInt(val) || 0;
+        };
+
+        // Tự động định dạng dấu phẩy khi người dùng gõ vào ô chi phí
+        function formatInput(input) {
+            let cursorPosition = input.selectionStart;
+            let originalLength = input.value.length;
+            
+            let num = parseNum(input.value);
+            if (num === 0 && input.value === '') {
+                input.value = '';
+                calculate();
+                return;
+            }
+            
+            input.value = formatVND(num);
+            
+            // Giữ vị trí con trỏ chuột không bị nhảy lung tung khi tự thêm dấu phẩy
+            let newLength = input.value.length;
+            cursorPosition = cursorPosition + (newLength - originalLength);
+            input.setSelectionRange(cursorPosition, cursorPosition);
+            
+            calculate();
+        }
 
         function initData() {
-            // Tự động chọn tháng hiện tại
             const currentMonth = new Date().getMonth() + 1;
             document.getElementById('monthSelect').value = currentMonth;
 
@@ -168,12 +193,38 @@
             loadData();
         }
 
+        // Ghi nhận trạng thái tạm thời trên màn hình (Tránh mất dữ liệu khi thêm người)
+        function captureCurrentState() {
+            if (!appData.records[currentKey]) return;
+            
+            appData.records[currentKey].costs = {
+                fee: parseNum(document.getElementById('feePerSession').value),
+                sanT7: parseNum(document.getElementById('sanT7').value),
+                cauT7: parseNum(document.getElementById('cauT7').value),
+                khacT7: parseNum(document.getElementById('khacT7').value),
+                sanCN: parseNum(document.getElementById('sanCN').value),
+                cauCN: parseNum(document.getElementById('cauCN').value),
+                khacCN: parseNum(document.getElementById('khacCN').value),
+            };
+
+            globalMembers.forEach((name, i) => {
+                const elDkT7 = document.getElementById(`dkT7_${i}`);
+                if (elDkT7) {
+                    appData.records[currentKey].membersData[name] = {
+                        dkT7: elDkT7.checked,
+                        ttT7: document.getElementById(`ttT7_${i}`).checked,
+                        dkCN: document.getElementById(`dkCN_${i}`).checked,
+                        ttCN: document.getElementById(`ttCN_${i}`).checked
+                    };
+                }
+            });
+        }
+
         function loadData() {
             const m = document.getElementById('monthSelect').value;
             const w = document.getElementById('weekSelect').value;
             currentKey = m + '_' + w;
 
-            // Nếu chưa có dữ liệu của tuần này, tạo mới
             if (!appData.records[currentKey]) {
                 appData.records[currentKey] = {
                     costs: { fee: 50000, sanT7: 0, cauT7: 0, khacT7: 0, sanCN: 0, cauCN: 0, khacCN: 0 },
@@ -184,21 +235,20 @@
             const record = appData.records[currentKey];
             const c = record.costs;
 
-            // Đưa dữ liệu chi phí lên UI
-            document.getElementById('feePerSession').value = c.fee;
-            document.getElementById('sanT7').value = c.sanT7;
-            document.getElementById('cauT7').value = c.cauT7;
-            document.getElementById('khacT7').value = c.khacT7;
-            document.getElementById('sanCN').value = c.sanCN;
-            document.getElementById('cauCN').value = c.cauCN;
-            document.getElementById('khacCN').value = c.khacCN;
+            // Hiển thị chi phí lên UI (kèm format dấu phẩy)
+            document.getElementById('feePerSession').value = formatVND(c.fee);
+            document.getElementById('sanT7').value = formatVND(c.sanT7);
+            document.getElementById('cauT7').value = formatVND(c.cauT7);
+            document.getElementById('khacT7').value = formatVND(c.khacT7);
+            document.getElementById('sanCN').value = formatVND(c.sanCN);
+            document.getElementById('cauCN').value = formatVND(c.cauCN);
+            document.getElementById('khacCN').value = formatVND(c.khacCN);
 
             // Vẽ bảng thành viên
             const tbody = document.querySelector('#memberTable tbody');
             tbody.innerHTML = '';
             
             globalMembers.forEach((name, i) => {
-                // Lấy data cũ nếu có, không thì mặc định là chưa tick
                 const md = record.membersData[name] || { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
 
                 tbody.innerHTML += `
@@ -208,7 +258,7 @@
                             <button class="btn-remove" title="Xóa người này" onclick="removeMember('${name}')">X</button>
                         </td>
                         <td><input type="checkbox" id="dkT7_${i}" ${md.dkT7 ? 'checked' : ''} onchange="calculate()"></td>
-                        <td class="col-group"><input type="checkbox" id="ttT7_${i}" ${md.ttT7 ? 'checked' : ''} onchange="calculate()"></td>
+                        <td><input type="checkbox" id="ttT7_${i}" ${md.ttT7 ? 'checked' : ''} onchange="calculate()"></td>
                         <td><input type="checkbox" id="dkCN_${i}" ${md.dkCN ? 'checked' : ''} onchange="calculate()"></td>
                         <td class="col-group"><input type="checkbox" id="ttCN_${i}" ${md.ttCN ? 'checked' : ''} onchange="calculate()"></td>
                         
@@ -225,21 +275,28 @@
             calculate();
         }
 
+        function switchPeriod() {
+            // Khi người dùng chủ động chuyển Tháng/Tuần, ta không lưu đè tự động trạng thái dở dang tránh sai sót
+            loadData();
+        }
+
         function addMember() {
             const input = document.getElementById('newMemberName');
             const name = input.value.trim();
             if (name && !globalMembers.includes(name)) {
+                captureCurrentState(); // Chụp lại dữ liệu hiện có trên màn hình trước
                 globalMembers.push(name);
                 input.value = '';
                 saveToLocal();
-                loadData(); // Tải lại bảng
+                loadData(); // Vẽ lại bảng (vẫn giữ nguyên trạng thái cũ nhờ bước chụp dữ liệu)
             } else if (globalMembers.includes(name)) {
                 alert('Thành viên này đã có trong danh sách!');
             }
         }
 
         function removeMember(name) {
-            if (confirm(`Bạn có chắc muốn xóa "${name}"? (Chỉ ẩn khỏi bảng, dữ liệu cũ vẫn giữ nguyên)`)) {
+            if (confirm(`Bạn có chắc muốn xóa "${name}" khỏi danh sách hiện tại?`)) {
+                captureCurrentState(); 
                 globalMembers = globalMembers.filter(n => n !== name);
                 saveToLocal();
                 loadData();
@@ -254,32 +311,10 @@
         }
 
         function saveAndCalculate() {
-            const record = appData.records[currentKey];
-            
-            // Lưu chi phí
-            record.costs = {
-                fee: parseNum(document.getElementById('feePerSession').value),
-                sanT7: parseNum(document.getElementById('sanT7').value),
-                cauT7: parseNum(document.getElementById('cauT7').value),
-                khacT7: parseNum(document.getElementById('khacT7').value),
-                sanCN: parseNum(document.getElementById('sanCN').value),
-                cauCN: parseNum(document.getElementById('cauCN').value),
-                khacCN: parseNum(document.getElementById('khacCN').value),
-            };
-
-            // Lưu checkbox
-            globalMembers.forEach((name, i) => {
-                record.membersData[name] = {
-                    dkT7: document.getElementById(`dkT7_${i}`).checked,
-                    ttT7: document.getElementById(`ttT7_${i}`).checked,
-                    dkCN: document.getElementById(`dkCN_${i}`).checked,
-                    ttCN: document.getElementById(`ttCN_${i}`).checked
-                };
-            });
-
+            captureCurrentState();
             saveToLocal();
             calculate();
-            alert(`Đã chốt sổ: Tháng ${document.getElementById('monthSelect').value} - Tuần ${document.getElementById('weekSelect').value}!`);
+            alert(`Đã chốt sổ và lưu dữ liệu: Tháng ${document.getElementById('monthSelect').value} - Tuần ${document.getElementById('weekSelect').value}!`);
         }
 
         function calculate() {
@@ -293,7 +328,6 @@
             let actualSatCount = 0;
             let actualSunCount = 0;
             
-            // Đếm sĩ số trực tiếp từ giao diện (để phản hồi tức thì khi bấm tick)
             globalMembers.forEach((name, i) => {
                 if (document.getElementById(`ttT7_${i}`) && document.getElementById(`ttT7_${i}`).checked) actualSatCount++;
                 if (document.getElementById(`ttCN_${i}`) && document.getElementById(`ttCN_${i}`).checked) actualSunCount++;
@@ -307,10 +341,9 @@
             document.getElementById('sisoCN').innerText = actualSunCount + " người";
             document.getElementById('bqCN').innerText = formatVND(costPerPersonSun);
 
-            // Tính toán từng dòng
             globalMembers.forEach((name, i) => {
                 const elDkT7 = document.getElementById(`dkT7_${i}`);
-                if (!elDkT7) return; // Bỏ qua nếu giao diện chưa render xong
+                if (!elDkT7) return;
 
                 let dkT7 = elDkT7.checked;
                 let ttT7 = document.getElementById(`ttT7_${i}`).checked;
@@ -335,7 +368,6 @@
             });
         }
 
-        // Chạy khởi tạo
         initData();
     </script>
 </body>
