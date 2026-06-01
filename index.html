@@ -345,7 +345,7 @@
         }
 
         function calculate() {
-            const fee = parseNum(document.getElementById('feePerSession').value);
+const fee = parseNum(document.getElementById('feePerSession').value);
             const totalT7 = parseNum(document.getElementById('sanT7').value) + parseNum(document.getElementById('cauT7').value) + parseNum(document.getElementById('khacT7').value);
             const totalCN = parseNum(document.getElementById('sanCN').value) + parseNum(document.getElementById('cauCN').value) + parseNum(document.getElementById('khacCN').value);
             
@@ -358,8 +358,10 @@
                 if (document.getElementById(`ttCN_${i}`) && document.getElementById(`ttCN_${i}`).checked) actCN++;
             });
 
-            const bqT7 = actT7 > 0 ? totalT7 / actT7 : 0;
-            const bqCN = actCN > 0 ? totalCN / actCN : 0;
+            // SỬA ĐỔI TẠI ĐÂY: Thuật toán làm tròn LÊN đến hàng ngàn (Math.ceil)
+            // Ví dụ: 42,333 chia 1000 = 42.333 -> làm tròn lên thành 43 -> nhân 1000 = 43,000
+            const bqT7 = actT7 > 0 ? Math.ceil((totalT7 / actT7) / 1000) * 1000 : 0;
+            const bqCN = actCN > 0 ? Math.ceil((totalCN / actCN) / 1000) * 1000 : 0;
 
             document.getElementById('sisoT7').innerText = actT7 + " người";
             document.getElementById('bqT7').innerText = formatVND(bqT7);
@@ -373,8 +375,10 @@
                 if (!elDkT7) return;
 
                 let tamThu = (elDkT7.checked ? fee : 0) + (document.getElementById(`dkCN_${i}`).checked ? fee : 0);
+                
                 let cT7 = document.getElementById(`ttT7_${i}`).checked ? bqT7 : 0;
                 let cCN = document.getElementById(`ttCN_${i}`).checked ? bqCN : 0;
+                
                 let tDong = cT7 + cCN;
                 let bal = tamThu - tDong;
 
