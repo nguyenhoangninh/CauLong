@@ -6,7 +6,7 @@
     <title>Quản Lý Quỹ Cầu Lông</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f3f4f6; color: #333; margin: 0; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1300px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #1e3a8a; }
         
         /* Header controls */
@@ -14,12 +14,12 @@
         .week-selector select { padding: 8px; font-size: 15px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; margin-right: 10px; cursor: pointer; }
         
         /* Layout chi phí */
-        .cost-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .cost-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .cost-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .cost-box h3 { margin-top: 0; color: #0f172a; font-size: 16px; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
+        .cost-box h3 { margin-top: 0; color: #0f172a; font-size: 15px; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
         .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
-        .input-group label { font-size: 14px; font-weight: bold; color: #475569;}
-        .input-group input { width: 120px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; }
+        .input-group label { font-size: 13px; font-weight: bold; color: #475569;}
+        .input-group input { width: 110px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; }
         
         /* Table */
         table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
@@ -107,16 +107,27 @@
                 <div class="input-group" style="margin-top: 15px;"><label>Sĩ số CN:</label><strong id="sisoCN">0 người</strong></div>
                 <div class="input-group"><label>Bình quân CN:</label><strong id="bqCN" style="color: #b91c1c;">0 đ/người</strong></div>
             </div>
+
+            <div class="cost-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+                <h3>Số dư Quỹ tuần</h3>
+                <div class="input-group"><label>Số dư đầu tuần:</label><strong id="fundOpening">0</strong></div>
+                <div class="input-group"><label>Thu trong kỳ (Quỹ):</label><strong id="fundIncome" style="color: #16a34a;">0</strong></div>
+                <div class="input-group"><label>Chi trong kỳ (Tay):</label><input type="text" id="fundExpense" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                    <label>Số dư cuối tuần:</label><strong id="fundClosing" style="color: #15803d; font-size: 16px;">0</strong>
+                </div>
+            </div>
         </div>
 
         <div style="overflow-x:auto;">
             <table id="memberTable">
                 <thead>
                     <tr>
+                        <th rowspan="2" style="width: 50px;">STT</th>
                         <th rowspan="2" class="col-group" style="width: 150px;">Họ và Tên</th>
                         <th colspan="2" class="col-group" style="background-color: #0284c7;">Thứ 7</th>
                         <th colspan="2" class="col-group" style="background-color: #b91c1c;">Chủ Nhật</th>
-                        <th rowspan="2" class="col-group">Tạm Thu<br><small>(Theo Dự kiến)</small></th>
+                        <th rowspan="2" class="col-group">Tạm Thu<br><small>(Dự kiến)</small></th>
                         <th rowspan="2">Chi phí T7<br><small>(Thực tế)</small></th>
                         <th rowspan="2" class="col-group">Chi phí CN<br><small>(Thực tế)</small></th>
                         <th rowspan="2" style="background-color: #ca8a04;">Tổng<br>Phải Đóng</th>
@@ -130,6 +141,19 @@
                 </thead>
                 <tbody>
                     </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; background-color: #e2e8f0;">
+                        <td colspan="2">Tổng cộng</td>
+                        <td></td><td class="col-group"></td>
+                        <td></td><td class="col-group"></td>
+                        <td id="totalTamThu" class="col-group">0</td>
+                        <td id="totalChiPhiT7">0</td>
+                        <td id="totalChiPhiCN" class="col-group">0</td>
+                        <td id="totalTongDong" style="background-color: #fef08a;">0</td>
+                        <td id="totalPhaiThu" class="highlight">0</td>
+                        <td id="totalXungQuy" class="highlight-green">0</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
@@ -149,7 +173,6 @@
 
         const formatVND = (num) => Math.round(num).toLocaleString('en-US');
         
-        // Hàm chuyển đổi chuỗi có dấu phẩy thành số thuần túy để tính toán
         const parseNum = (val) => {
             if (!val) return 0;
             if (typeof val === 'string') {
@@ -158,7 +181,6 @@
             return parseInt(val) || 0;
         };
 
-        // Tự động định dạng dấu phẩy khi người dùng gõ vào ô chi phí
         function formatInput(input) {
             let cursorPosition = input.selectionStart;
             let originalLength = input.value.length;
@@ -171,8 +193,6 @@
             }
             
             input.value = formatVND(num);
-            
-            // Giữ vị trí con trỏ chuột không bị nhảy lung tung khi tự thêm dấu phẩy
             let newLength = input.value.length;
             cursorPosition = cursorPosition + (newLength - originalLength);
             input.setSelectionRange(cursorPosition, cursorPosition);
@@ -184,7 +204,7 @@
             const currentMonth = new Date().getMonth() + 1;
             document.getElementById('monthSelect').value = currentMonth;
 
-            const savedData = localStorage.getItem('cauLongDB_v2');
+            const savedData = localStorage.getItem('cauLongDB_v3');
             if (savedData) {
                 const parsed = JSON.parse(savedData);
                 if (parsed.globalMembers) globalMembers = parsed.globalMembers;
@@ -193,7 +213,31 @@
             loadData();
         }
 
-        // Ghi nhận trạng thái tạm thời trên màn hình (Tránh mất dữ liệu khi thêm người)
+        // Tìm số dư cuối tuần trước để làm số dư đầu tuần này
+        function getPreviousWeekClosingBalance(m, w) {
+            let prevM = parseInt(m);
+            let prevW = parseInt(w) - 1;
+            
+            if (prevW === 0) {
+                if (prevM === 1) return 0; // Tháng 1 tuần 1 mặc định đầu kỳ = 0
+                prevM = prevM - 1;
+                // Tìm tuần lớn nhất có dữ liệu của tháng trước (từ tuần 5 lùi về 1)
+                for (let wk = 5; wk >= 1; wk--) {
+                    let key = prevM + '_' + wk;
+                    if (appData.records[key] && appData.records[key].fundClosingBalance !== undefined) {
+                        return appData.records[key].fundClosingBalance;
+                    }
+                }
+                return 0;
+            } else {
+                let key = prevM + '_' + prevW;
+                if (appData.records[key] && appData.records[key].fundClosingBalance !== undefined) {
+                    return appData.records[key].fundClosingBalance;
+                }
+                return 0;
+            }
+        }
+
         function captureCurrentState() {
             if (!appData.records[currentKey]) return;
             
@@ -206,6 +250,7 @@
                 cauCN: parseNum(document.getElementById('cauCN').value),
                 khacCN: parseNum(document.getElementById('khacCN').value),
             };
+            appData.records[currentKey].fundExpense = parseNum(document.getElementById('fundExpense').value);
 
             globalMembers.forEach((name, i) => {
                 const elDkT7 = document.getElementById(`dkT7_${i}`);
@@ -228,6 +273,8 @@
             if (!appData.records[currentKey]) {
                 appData.records[currentKey] = {
                     costs: { fee: 50000, sanT7: 0, cauT7: 0, khacT7: 0, sanCN: 0, cauCN: 0, khacCN: 0 },
+                    fundExpense: 0,
+                    fundClosingBalance: 0,
                     membersData: {}
                 };
             }
@@ -235,7 +282,6 @@
             const record = appData.records[currentKey];
             const c = record.costs;
 
-            // Hiển thị chi phí lên UI (kèm format dấu phẩy)
             document.getElementById('feePerSession').value = formatVND(c.fee);
             document.getElementById('sanT7').value = formatVND(c.sanT7);
             document.getElementById('cauT7').value = formatVND(c.cauT7);
@@ -243,8 +289,8 @@
             document.getElementById('sanCN').value = formatVND(c.sanCN);
             document.getElementById('cauCN').value = formatVND(c.cauCN);
             document.getElementById('khacCN').value = formatVND(c.khacCN);
+            document.getElementById('fundExpense').value = formatVND(record.fundExpense || 0);
 
-            // Vẽ bảng thành viên
             const tbody = document.querySelector('#memberTable tbody');
             tbody.innerHTML = '';
             
@@ -253,6 +299,7 @@
 
                 tbody.innerHTML += `
                     <tr>
+                        <td>${i + 1}</td>
                         <td class="col-group" style="text-align: left; padding-left: 10px;">
                             <strong>${name}</strong>
                             <button class="btn-remove" title="Xóa người này" onclick="removeMember('${name}')">X</button>
@@ -276,7 +323,6 @@
         }
 
         function switchPeriod() {
-            // Khi người dùng chủ động chuyển Tháng/Tuần, ta không lưu đè tự động trạng thái dở dang tránh sai sót
             loadData();
         }
 
@@ -284,18 +330,18 @@
             const input = document.getElementById('newMemberName');
             const name = input.value.trim();
             if (name && !globalMembers.includes(name)) {
-                captureCurrentState(); // Chụp lại dữ liệu hiện có trên màn hình trước
+                captureCurrentState();
                 globalMembers.push(name);
                 input.value = '';
                 saveToLocal();
-                loadData(); // Vẽ lại bảng (vẫn giữ nguyên trạng thái cũ nhờ bước chụp dữ liệu)
+                loadData();
             } else if (globalMembers.includes(name)) {
                 alert('Thành viên này đã có trong danh sách!');
             }
         }
 
         function removeMember(name) {
-            if (confirm(`Bạn có chắc muốn xóa "${name}" khỏi danh sách hiện tại?`)) {
+            if (confirm(`Bạn có chắc muốn xóa "${name}" khỏi danh sách?`)) {
                 captureCurrentState(); 
                 globalMembers = globalMembers.filter(n => n !== name);
                 saveToLocal();
@@ -304,7 +350,7 @@
         }
 
         function saveToLocal() {
-            localStorage.setItem('cauLongDB_v2', JSON.stringify({
+            localStorage.setItem('cauLongDB_v3', JSON.stringify({
                 globalMembers: globalMembers,
                 records: appData.records
             }));
@@ -318,6 +364,9 @@
         }
 
         function calculate() {
+            const m = document.getElementById('monthSelect').value;
+            const w = document.getElementById('weekSelect').value;
+
             const fee = parseNum(document.getElementById('feePerSession').value);
             const totalT7 = parseNum(document.getElementById('sanT7').value) + parseNum(document.getElementById('cauT7').value) + parseNum(document.getElementById('khacT7').value);
             const totalCN = parseNum(document.getElementById('sanCN').value) + parseNum(document.getElementById('cauCN').value) + parseNum(document.getElementById('khacCN').value);
@@ -341,6 +390,9 @@
             document.getElementById('sisoCN').innerText = actualSunCount + " người";
             document.getElementById('bqCN').innerText = formatVND(costPerPersonSun);
 
+            // Các biến tính dòng tổng cộng hàng ngang
+            let totalTamThu = 0, totalChiPhiT7 = 0, totalChiPhiCN = 0, totalTongDong = 0, totalPhaiThu = 0, totalXungQuy = 0;
+
             globalMembers.forEach((name, i) => {
                 const elDkT7 = document.getElementById(`dkT7_${i}`);
                 if (!elDkT7) return;
@@ -359,6 +411,14 @@
                 let phaiThu = balance < 0 ? Math.abs(balance) : 0;
                 let xungQuy = balance > 0 ? balance : 0;
 
+                // Cộng dồn vào biến tổng cộng footer
+                totalTamThu += tamThu;
+                totalChiPhiT7 += myCostSat;
+                totalChiPhiCN += myCostSun;
+                totalTongDong += tongDong;
+                totalPhaiThu += phaiThu;
+                totalXungQuy += xungQuy;
+
                 document.getElementById(`tamthu_${i}`).innerText = formatVND(tamThu);
                 document.getElementById(`chiphiT7_${i}`).innerText = ttT7 ? formatVND(myCostSat) : "-";
                 document.getElementById(`chiphiCN_${i}`).innerText = ttCN ? formatVND(myCostSun) : "-";
@@ -366,6 +426,28 @@
                 document.getElementById(`phaithu_${i}`).innerText = formatVND(phaiThu);
                 document.getElementById(`xungquy_${i}`).innerText = formatVND(xungQuy);
             });
+
+            // Ghi dữ liệu dòng tổng cộng xuống bảng
+            document.getElementById('totalTamThu').innerText = formatVND(totalTamThu);
+            document.getElementById('totalChiPhiT7').innerText = formatVND(totalChiPhiT7);
+            document.getElementById('totalChiPhiCN').innerText = formatVND(totalChiPhiCN);
+            document.getElementById('totalTongDong').innerText = formatVND(totalTongDong);
+            document.getElementById('totalPhaiThu').innerText = formatVND(totalPhaiThu);
+            document.getElementById('totalXungQuy').innerText = formatVND(totalXungQuy);
+
+            // Xử lý Tính toán dòng tiền khối "Số dư Quỹ tuần"
+            let openingBalance = getPreviousWeekClosingBalance(m, w);
+            let fundExpense = parseNum(document.getElementById('fundExpense').value);
+            let closingBalance = openingBalance + totalXungQuy - fundExpense;
+
+            document.getElementById('fundOpening').innerText = formatVND(openingBalance);
+            document.getElementById('fundIncome').innerText = formatVND(totalXungQuy);
+            document.getElementById('fundClosing').innerText = formatVND(closingBalance);
+
+            // Lưu trạng thái tính toán quỹ để các tuần sau tham chiếu
+            if (appData.records[currentKey]) {
+                appData.records[currentKey].fundClosingBalance = closingBalance;
+            }
         }
 
         initData();
