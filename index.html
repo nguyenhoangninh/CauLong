@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Quỹ Cầu Lông</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f3f4f6; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #1e3a8a; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: #e0f2fe; padding: 15px; border-radius: 8px; }
+        label { font-weight: bold; font-size: 14px; }
+        input[type="number"] { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: center; }
+        th { background-color: #3b82f6; color: white; position: sticky; top: 0; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .btn { display: block; width: 100%; background: #16a34a; color: white; padding: 12px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn:hover { background: #15803d; }
+        .highlight { font-weight: bold; color: #dc2626; }
+        .highlight-green { font-weight: bold; color: #16a34a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Hệ Thống Tính Tiền Cầu Lông</h2>
+        
+        <div class="summary">
+            <div>
+                <label>Phí tạm thu/buổi (VNĐ):</label>
+                <input type="number" id="feePerSession" value="50000">
+            </div>
+            <div>
+                <label>Tổng chi phí Thứ 7 (Sân + Cầu + Nước):</label>
+                <input type="number" id="costSat" value="378000">
+            </div>
+            <div>
+                <label>Tổng chi phí Chủ Nhật (Sân + Cầu + Nước):</label>
+                <input type="number" id="costSun" value="208000">
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table id="memberTable">
+                <thead>
+                    <tr>
+                        <th>Họ và Tên</th>
+                        <th>Tham gia T7</th>
+                        <th>Tham gia CN</th>
+                        <th>Tạm thu</th>
+                        <th>Chi phí T7</th>
+                        <th>Chi phí CN</th>
+                        <th>Tổng phải đóng</th>
+                        <th>Còn phải thu</th>
+                        <th>Xung Quỹ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+
+        <button class="btn" onclick="calculate()">Chốt Sổ & Tính Toán</button>
+    </div>
+
+    <script>
+        // Danh sách thành viên mẫu (Dựa trên ảnh của bạn)
+        const members = [
+            { name: "C Thúy", sat: true, sun: true },
+            { name: "A Tâm", sat: true, sun: true },
+            { name: "Henry", sat: true, sun: false },
+            { name: "C Thảo", sat: true, sun: false },
+            { name: "A Chinh", sat: false, sun: false },
+            { name: "Hiếu", sat: false, sun: true },
+            { name: "Khánh", sat: false, sun: false },
+            { name: "Phương", sat: true, sun: false },
+            { name: "Quý", sat: true, sun: false },
+            { name: "Kiệt", sat: true, sun: true },
+            { name: "Vi", sat: true, sun: true },
+            { name: "Ninh", sat: true, sun: true },
+            { name: "C Tuyết", sat: true, sun: false }
+        ];
+
+        const tbody = document.querySelector('#memberTable tbody');
+
+        // Tạo bảng
+        function renderTable() {
+            tbody.innerHTML = '';
+            members.forEach((m, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${m.name}</strong></td>
+                        <td><input type="checkbox" id="sat_${index}" ${m.sat ? 'checked' : ''}></td>
+                        <td><input type="checkbox" id="sun_${index}" ${m.sun ? 'checked' : ''}></td>
+                        <td id="tamthu_${index}">0</td>
+                        <td id="chiphiSat_${index}" style="color: #0284c7;">0</td>
+                        <td id="chiphiSun_${index}" style="color: #b91c1c;">0</td>
+                        <td id="tongdong_${index}" style="font-weight: bold; background-color: #fef08a;">0</td>
+                        <td id="phaithu_${index}" class="highlight">0</td>
+                        <td id="xungquy_${index}" class="highlight-green">0</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Logic tính toán phân bổ chi phí
+        function calculate() {
+            const feePerSession = parseInt(document.getElementById('feePerSession').value) || 0;
+            const costSat = parseInt(document.getElementById('costSat').value) || 0;
+            const costSun = parseInt(document.getElementById('costSun').value) || 0;
+
+            let countSat = 0;
+            let countSun = 0;
+
+            // Đếm sĩ số
+            members.forEach((m, index) => {
+                m.sat = document.getElementById(`sat_${index}`).checked;
+                m.sun = document.getElementById(`sun_${index}`).checked;
+                if (m.sat) countSat++;
+                if (m.sun) countSun++;
+            });
+
+            // Tính đơn giá từng buổi
+            const costPerPersonSat = countSat > 0 ? costSat / countSat : 0;
+            const costPerPersonSun = countSun > 0 ? costSun / countSun : 0;
+
+            const formatVND = (num) => Math.round(num).toLocaleString('vi-VN');
+
+            // Tính toán cho từng người
+            members.forEach((m, index) => {
+                let tamThu = (m.sat ? feePerSession : 0) + (m.sun ? feePerSession : 0);
+                let myCostSat = m.sat ? costPerPersonSat : 0;
+                let myCostSun = m.sun ? costPerPersonSun : 0;
+                let tongDong = myCostSat + myCostSun;
+                
+                let balance = tamThu - tongDong;
+                let phaiThu = balance < 0 ? Math.abs(balance) : 0;
+                let xungQuy = balance > 0 ? balance : 0;
+
+                // Cập nhật giao diện
+                document.getElementById(`tamthu_${index}`).innerText = formatVND(tamThu);
+                document.getElementById(`chiphiSat_${index}`).innerText = m.sat ? formatVND(myCostSat) : "-";
+                document.getElementById(`chiphiSun_${index}`).innerText = m.sun ? formatVND(myCostSun) : "-";
+                document.getElementById(`tongdong_${index}`).innerText = formatVND(tongDong);
+                document.getElementById(`phaithu_${index}`).innerText = formatVND(phaiThu);
+                document.getElementById(`xungquy_${index}`).innerText = formatVND(xungQuy);
+            });
+        }
+
+        // Chạy lần đầu khi mở web
+        renderTable();
+        calculate();
+    </script>
+</body>
+</html>
