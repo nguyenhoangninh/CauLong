@@ -4,74 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Quỹ Cầu Lông</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f3f4f6; color: #333; margin: 0; }
         .container { max-width: 1300px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #1e3a8a; }
-        
-        /* Header controls */
         .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; }
         .week-selector select { padding: 8px; font-size: 15px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; margin-right: 10px; cursor: pointer; }
-        
-        /* Layout chi phí */
         .cost-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .cost-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .cost-box h3 { margin-top: 0; color: #0f172a; font-size: 15px; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
         .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
         .input-group label { font-size: 13px; font-weight: bold; color: #475569;}
         .input-group input { width: 110px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; }
-        
-        /* Table */
         table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 5px; text-align: center; vertical-align: middle; }
         th { background-color: #3b82f6; color: white; position: sticky; top: 0; }
         tr:nth-child(even) { background-color: #f9fafb; }
         .col-group { border-right: 2px solid #94a3b8 !important; }
-        
         input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-        
-        /* Add Member Box */
         .add-member-box { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; }
         .add-member-box input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 200px; }
         .btn-add { background: #3b82f6; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-add:hover { background: #2563eb; }
         .btn-remove { background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 3px 6px; font-size: 11px; margin-left: 8px; float: right; }
-        
         .btn { display: block; width: 100%; background: #16a34a; color: white; padding: 15px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
         .btn:hover { background: #15803d; }
         .highlight { font-weight: bold; color: #dc2626; }
         .highlight-green { font-weight: bold; color: #16a34a; }
-        .warning { color: #854d0e; font-size: 12px; font-style: italic; display: block; text-align: center; margin-top: 10px; }
+        .status-cloud { font-size: 13px; font-weight: bold; color: #15803d; background: #dcfce7; padding: 5px 10px; border-radius: 20px; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Hệ Thống Tính Tiền Cầu Lông</h2>
+        <h2>Hệ Thống Tính Tiền Cầu Lông (Dữ Liệu Đám Mây)</h2>
         
         <div class="header-controls">
             <div class="week-selector">
                 <label><strong>Kỳ tính toán: </strong></label>
-                <select id="monthSelect" onchange="switchPeriod()">
-                    <option value="1">Tháng 1</option>
-                    <option value="2">Tháng 2</option>
-                    <option value="3">Tháng 3</option>
-                    <option value="4">Tháng 4</option>
-                    <option value="5">Tháng 5</option>
-                    <option value="6">Tháng 6</option>
-                    <option value="7">Tháng 7</option>
-                    <option value="8">Tháng 8</option>
-                    <option value="9">Tháng 9</option>
-                    <option value="10">Tháng 10</option>
-                    <option value="11">Tháng 11</option>
-                    <option value="12">Tháng 12</option>
+                <select id="monthSelect" onchange="loadData()">
+                    <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option><option value="4">Tháng 4</option>
+                    <option value="5">Tháng 5</option><option value="6">Tháng 6</option><option value="7">Tháng 7</option><option value="8">Tháng 8</option>
+                    <option value="9">Tháng 9</option><option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
                 </select>
-                <select id="weekSelect" onchange="switchPeriod()">
-                    <option value="1">Tuần 1</option>
-                    <option value="2">Tuần 2</option>
-                    <option value="3">Tuần 3</option>
-                    <option value="4">Tuần 4</option>
-                    <option value="5">Tuần 5</option>
+                <select id="weekSelect" onchange="loadData()">
+                    <option value="1">Tuần 1</option><option value="2">Tuần 2</option><option value="3">Tuần 3</option><option value="4">Tuần 4</option><option value="5">Tuần 5</option>
                 </select>
+                <span id="syncStatus" class="status-cloud">Đã đồng bộ đám mây</span>
             </div>
             <div class="input-group">
                 <label>Phí tạm thu/buổi (VNĐ): &nbsp;</label>
@@ -139,8 +120,7 @@
                         <th>Dự kiến</th><th class="col-group">Thực tế</th>
                     </tr>
                 </thead>
-                <tbody>
-                    </tbody>
+                <tbody></tbody>
                 <tfoot>
                     <tr style="font-weight: bold; background-color: #e2e8f0;">
                         <td colspan="2">Tổng cộng</td>
@@ -162,124 +142,79 @@
             <button class="btn-add" onclick="addMember()">+ Thêm Người</button>
         </div>
 
-        <button class="btn" onclick="saveAndCalculate()">Chốt Sổ & Lưu Dữ Liệu</button>
-        <span class="warning">*Dữ liệu được lưu tự động trên thiết bị của bạn theo từng Tháng/Tuần.</span>
+        <button class="btn" onclick="saveAndCalculate()">Chốt Sổ & Lưu Lên Đám Mây</button>
     </div>
 
     <script>
+        // --- 1. CẤU HÌNH LIÊN KẾT DATABASE ONLINE (THAY CÁC THÔNG SỐ CỦA BẠN VÀO ĐÂY) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtryxy-eM2Gia6b1g-0Y6RtBXCIg8MW3c",
+            authDomain: "quy-cau-long.firebaseapp.com",
+            databaseURL: "https://quy-cau-long-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "quy-cau-long",
+            storageBucket: "quy-cau-long.firebasestorage.app",
+            messagingSenderId: "326193816949",
+            appId: "1:326193816949:web:a7bd9e5f5b9019981e1f3c",
+            measurementId: "G-TL7LWER43Q"
+        };
+        
+        // Khởi tạo kết nối đám mây
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         let globalMembers = ["C Thúy", "A Tâm", "Henry", "C Thảo", "A Chinh", "Hiếu", "Khánh", "Phương", "Quý", "Kiệt", "Vi", "Ninh", "C Tuyết"];
-        let appData = { records: {} };
+        let cloudData = { records: {} };
         let currentKey = '1_1';
 
         const formatVND = (num) => Math.round(num).toLocaleString('en-US');
-        
         const parseNum = (val) => {
             if (!val) return 0;
-            if (typeof val === 'string') {
-                return parseInt(val.replace(/[^0-9]/g, '')) || 0;
-            }
+            if (typeof val === 'string') return parseInt(val.replace(/[^0-9]/g, '')) || 0;
             return parseInt(val) || 0;
         };
 
         function formatInput(input) {
             let cursorPosition = input.selectionStart;
             let originalLength = input.value.length;
-            
             let num = parseNum(input.value);
-            if (num === 0 && input.value === '') {
-                input.value = '';
-                calculate();
-                return;
-            }
-            
+            if (num === 0 && input.value === '') { input.value = ''; calculate(); return; }
             input.value = formatVND(num);
-            let newLength = input.value.length;
-            cursorPosition = cursorPosition + (newLength - originalLength);
-            input.setSelectionRange(cursorPosition, cursorPosition);
-            
+            input.setSelectionRange(cursorPosition + (input.value.length - originalLength), cursorPosition + (input.value.length - originalLength));
             calculate();
         }
 
-        function initData() {
-            const currentMonth = new Date().getMonth() + 1;
-            document.getElementById('monthSelect').value = currentMonth;
-
-            const savedData = localStorage.getItem('cauLongDB_v3');
-            if (savedData) {
-                const parsed = JSON.parse(savedData);
-                if (parsed.globalMembers) globalMembers = parsed.globalMembers;
-                if (parsed.records) appData.records = parsed.records;
-            }
-            loadData();
-        }
-
-        // Tìm số dư cuối tuần trước để làm số dư đầu tuần này
-        function getPreviousWeekClosingBalance(m, w) {
-            let prevM = parseInt(m);
-            let prevW = parseInt(w) - 1;
-            
-            if (prevW === 0) {
-                if (prevM === 1) return 0; // Tháng 1 tuần 1 mặc định đầu kỳ = 0
-                prevM = prevM - 1;
-                // Tìm tuần lớn nhất có dữ liệu của tháng trước (từ tuần 5 lùi về 1)
-                for (let wk = 5; wk >= 1; wk--) {
-                    let key = prevM + '_' + wk;
-                    if (appData.records[key] && appData.records[key].fundClosingBalance !== undefined) {
-                        return appData.records[key].fundClosingBalance;
-                    }
-                }
-                return 0;
-            } else {
-                let key = prevM + '_' + prevW;
-                if (appData.records[key] && appData.records[key].fundClosingBalance !== undefined) {
-                    return appData.records[key].fundClosingBalance;
-                }
-                return 0;
-            }
-        }
-
-        function captureCurrentState() {
-            if (!appData.records[currentKey]) return;
-            
-            appData.records[currentKey].costs = {
-                fee: parseNum(document.getElementById('feePerSession').value),
-                sanT7: parseNum(document.getElementById('sanT7').value),
-                cauT7: parseNum(document.getElementById('cauT7').value),
-                khacT7: parseNum(document.getElementById('khacT7').value),
-                sanCN: parseNum(document.getElementById('sanCN').value),
-                cauCN: parseNum(document.getElementById('cauCN').value),
-                khacCN: parseNum(document.getElementById('khacCN').value),
-            };
-            appData.records[currentKey].fundExpense = parseNum(document.getElementById('fundExpense').value);
-
-            globalMembers.forEach((name, i) => {
-                const elDkT7 = document.getElementById(`dkT7_${i}`);
-                if (elDkT7) {
-                    appData.records[currentKey].membersData[name] = {
-                        dkT7: elDkT7.checked,
-                        ttT7: document.getElementById(`ttT7_${i}`).checked,
-                        dkCN: document.getElementById(`dkCN_${i}`).checked,
-                        ttCN: document.getElementById(`ttCN_${i}`).checked
-                    };
-                }
-            });
-        }
-
+        // Tải dữ liệu từ Đám Mây khi mở web hoặc đổi Tuần/Tháng
         function loadData() {
             const m = document.getElementById('monthSelect').value;
             const w = document.getElementById('weekSelect').value;
             currentKey = m + '_' + w;
+            
+            showStatus("Đang tải dữ liệu từ đám mây...", "#e0f2fe", "#0369a1");
 
-            if (!appData.records[currentKey]) {
-                appData.records[currentKey] = {
+            // Đọc dữ liệu tập trung từ Firebase
+            db.ref('badminton_app').once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (data.globalMembers) globalMembers = data.globalMembers;
+                    if (data.records) cloudData.records = data.records;
+                }
+                renderUIElements();
+                showStatus("Đã kết nối đám mây trực tuyến", "#dcfce7", "#15803d");
+            }).catch(err => {
+                console.error(err);
+                showStatus("Lỗi kết nối mạng!", "#fee2e2", "#b91c1c");
+            });
+        }
+
+        function renderUIElements() {
+            if (!cloudData.records[currentKey]) {
+                cloudData.records[currentKey] = {
                     costs: { fee: 50000, sanT7: 0, cauT7: 0, khacT7: 0, sanCN: 0, cauCN: 0, khacCN: 0 },
-                    fundExpense: 0,
-                    fundClosingBalance: 0,
-                    membersData: {}
+                    fundExpense: 0, fundClosingBalance: 0, membersData: {}
                 };
             }
 
-            const record = appData.records[currentKey];
+            const record = cloudData.records[currentKey];
             const c = record.costs;
 
             document.getElementById('feePerSession').value = formatVND(c.fee);
@@ -296,19 +231,17 @@
             
             globalMembers.forEach((name, i) => {
                 const md = record.membersData[name] || { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
-
                 tbody.innerHTML += `
                     <tr>
                         <td>${i + 1}</td>
                         <td class="col-group" style="text-align: left; padding-left: 10px;">
                             <strong>${name}</strong>
-                            <button class="btn-remove" title="Xóa người này" onclick="removeMember('${name}')">X</button>
+                            <button class="btn-remove" title="Xóa" onclick="removeMember('${name}')">X</button>
                         </td>
                         <td><input type="checkbox" id="dkT7_${i}" ${md.dkT7 ? 'checked' : ''} onchange="calculate()"></td>
                         <td><input type="checkbox" id="ttT7_${i}" ${md.ttT7 ? 'checked' : ''} onchange="calculate()"></td>
                         <td><input type="checkbox" id="dkCN_${i}" ${md.dkCN ? 'checked' : ''} onchange="calculate()"></td>
                         <td class="col-group"><input type="checkbox" id="ttCN_${i}" ${md.ttCN ? 'checked' : ''} onchange="calculate()"></td>
-                        
                         <td class="col-group" id="tamthu_${i}" style="background:#f1f5f9; font-weight:bold;">0</td>
                         <td id="chiphiT7_${i}" style="color: #0284c7;">0</td>
                         <td class="col-group" id="chiphiCN_${i}" style="color: #b91c1c;">0</td>
@@ -318,55 +251,100 @@
                     </tr>
                 `;
             });
-
             calculate();
         }
 
-        function switchPeriod() {
-            loadData();
+        function getPreviousWeekClosingBalance() {
+            const m = document.getElementById('monthSelect').value;
+            const w = document.getElementById('weekSelect').value;
+            let prevM = parseInt(m), prevW = parseInt(w) - 1;
+            
+            if (prevW === 0) {
+                if (prevM === 1) return 0;
+                prevM = prevM - 1;
+                for (let wk = 5; wk >= 1; wk--) {
+                    let key = prevM + '_' + wk;
+                    if (cloudData.records[key] && cloudData.records[key].fundClosingBalance !== undefined) {
+                        return cloudData.records[key].fundClosingBalance;
+                    }
+                }
+                return 0;
+            } else {
+                let key = prevM + '_' + prevW;
+                if (cloudData.records[key] && cloudData.records[key].fundClosingBalance !== undefined) {
+                    return cloudData.records[key].fundClosingBalance;
+                }
+                return 0;
+            }
+        }
+
+        function captureCurrentState() {
+            if (!cloudData.records[currentKey]) return;
+            cloudData.records[currentKey].costs = {
+                fee: parseNum(document.getElementById('feePerSession').value),
+                sanT7: parseNum(document.getElementById('sanT7').value),
+                cauT7: parseNum(document.getElementById('cauT7').value),
+                khacT7: parseNum(document.getElementById('khacT7').value),
+                sanCN: parseNum(document.getElementById('sanCN').value),
+                cauCN: parseNum(document.getElementById('cauCN').value),
+                khacCN: parseNum(document.getElementById('khacCN').value),
+            };
+            cloudData.records[currentKey].fundExpense = parseNum(document.getElementById('fundExpense').value);
+
+            globalMembers.forEach((name, i) => {
+                const elDkT7 = document.getElementById(`dkT7_${i}`);
+                if (elDkT7) {
+                    cloudData.records[currentKey].membersData[name] = {
+                        dkT7: elDkT7.checked, ttT7: document.getElementById(`ttT7_${i}`).checked,
+                        dkCN: document.getElementById(`dkCN_${i}`).checked, ttCN: document.getElementById(`ttCN_${i}`).checked
+                    };
+                }
+            });
         }
 
         function addMember() {
-            const input = document.getElementById('newMemberName');
-            const name = input.value.trim();
+            const name = document.getElementById('newMemberName').value.trim();
             if (name && !globalMembers.includes(name)) {
                 captureCurrentState();
                 globalMembers.push(name);
-                input.value = '';
-                saveToLocal();
-                loadData();
-            } else if (globalMembers.includes(name)) {
-                alert('Thành viên này đã có trong danh sách!');
-            }
+                document.getElementById('newMemberName').value = '';
+                saveToCloudSilent();
+            } else if (globalMembers.includes(name)) { alert('Tên đã tồn tại!'); }
         }
 
         function removeMember(name) {
-            if (confirm(`Bạn có chắc muốn xóa "${name}" khỏi danh sách?`)) {
+            if (confirm(`Bạn có chắc muốn xóa "${name}"?`)) {
                 captureCurrentState(); 
                 globalMembers = globalMembers.filter(n => n !== name);
-                saveToLocal();
-                loadData();
+                saveToCloudSilent();
             }
         }
 
-        function saveToLocal() {
-            localStorage.setItem('cauLongDB_v3', JSON.stringify({
-                globalMembers: globalMembers,
-                records: appData.records
-            }));
-        }
-
+        // Đẩy dữ liệu trực tiếp lên Đám mây đám mây Firebase
         function saveAndCalculate() {
             captureCurrentState();
-            saveToLocal();
-            calculate();
-            alert(`Đã chốt sổ và lưu dữ liệu: Tháng ${document.getElementById('monthSelect').value} - Tuần ${document.getElementById('weekSelect').value}!`);
+            showStatus("Đang lưu lên đám mây...", "#fef08a", "#a16207");
+            
+            db.ref('badminton_app').set({
+                globalMembers: globalMembers,
+                records: cloudData.records
+            }).then(() => {
+                calculate();
+                showStatus("Đã kết nối đám mây trực tuyến", "#dcfce7", "#15803d");
+                alert(`Đã chốt sổ và lưu lên Cloud thành công cho Kỳ tính toán này!`);
+            }).catch(err => {
+                alert("Lưu thất bại, kiểm tra kết nối mạng!");
+            });
+        }
+
+        function saveToCloudSilent() {
+            db.ref('badminton_app').set({
+                globalMembers: globalMembers,
+                records: cloudData.records
+            }).then(() => { renderUIElements(); });
         }
 
         function calculate() {
-            const m = document.getElementById('monthSelect').value;
-            const w = document.getElementById('weekSelect').value;
-
             const fee = parseNum(document.getElementById('feePerSession').value);
             const totalT7 = parseNum(document.getElementById('sanT7').value) + parseNum(document.getElementById('cauT7').value) + parseNum(document.getElementById('khacT7').value);
             const totalCN = parseNum(document.getElementById('sanCN').value) + parseNum(document.getElementById('cauCN').value) + parseNum(document.getElementById('khacCN').value);
@@ -374,83 +352,70 @@
             document.getElementById('tongT7').innerText = formatVND(totalT7);
             document.getElementById('tongCN').innerText = formatVND(totalCN);
 
-            let actualSatCount = 0;
-            let actualSunCount = 0;
-            
+            let actT7 = 0, actCN = 0;
             globalMembers.forEach((name, i) => {
-                if (document.getElementById(`ttT7_${i}`) && document.getElementById(`ttT7_${i}`).checked) actualSatCount++;
-                if (document.getElementById(`ttCN_${i}`) && document.getElementById(`ttCN_${i}`).checked) actualSunCount++;
+                if (document.getElementById(`ttT7_${i}`) && document.getElementById(`ttT7_${i}`).checked) actT7++;
+                if (document.getElementById(`ttCN_${i}`) && document.getElementById(`ttCN_${i}`).checked) actCN++;
             });
 
-            const costPerPersonSat = actualSatCount > 0 ? totalT7 / actualSatCount : 0;
-            const costPerPersonSun = actualSunCount > 0 ? totalCN / actualSunCount : 0;
+            const bqT7 = actT7 > 0 ? totalT7 / actT7 : 0;
+            const bqCN = actCN > 0 ? totalCN / actCN : 0;
 
-            document.getElementById('sisoT7').innerText = actualSatCount + " người";
-            document.getElementById('bqT7').innerText = formatVND(costPerPersonSat);
-            document.getElementById('sisoCN').innerText = actualSunCount + " người";
-            document.getElementById('bqCN').innerText = formatVND(costPerPersonSun);
+            document.getElementById('sisoT7').innerText = actT7 + " người";
+            document.getElementById('bqT7').innerText = formatVND(bqT7);
+            document.getElementById('sisoCN').innerText = actCN + " người";
+            document.getElementById('bqCN').innerText = formatVND(bqCN);
 
-            // Các biến tính dòng tổng cộng hàng ngang
-            let totalTamThu = 0, totalChiPhiT7 = 0, totalChiPhiCN = 0, totalTongDong = 0, totalPhaiThu = 0, totalXungQuy = 0;
+            let tTamThu = 0, tChiT7 = 0, tChiCN = 0, tTongDong = 0, tPhaiThu = 0, tXungQuy = 0;
 
             globalMembers.forEach((name, i) => {
                 const elDkT7 = document.getElementById(`dkT7_${i}`);
                 if (!elDkT7) return;
 
-                let dkT7 = elDkT7.checked;
-                let ttT7 = document.getElementById(`ttT7_${i}`).checked;
-                let dkCN = document.getElementById(`dkCN_${i}`).checked;
-                let ttCN = document.getElementById(`ttCN_${i}`).checked;
+                let tamThu = (elDkT7.checked ? fee : 0) + (document.getElementById(`dkCN_${i}`).checked ? fee : 0);
+                let cT7 = document.getElementById(`ttT7_${i}`).checked ? bqT7 : 0;
+                let cCN = document.getElementById(`ttCN_${i}`).checked ? bqCN : 0;
+                let tDong = cT7 + cCN;
+                let bal = tamThu - tDong;
 
-                let tamThu = (dkT7 ? fee : 0) + (dkCN ? fee : 0);
-                let myCostSat = ttT7 ? costPerPersonSat : 0;
-                let myCostSun = ttCN ? costPerPersonSun : 0;
-                let tongDong = myCostSat + myCostSun;
-                
-                let balance = tamThu - tongDong;
-                let phaiThu = balance < 0 ? Math.abs(balance) : 0;
-                let xungQuy = balance > 0 ? balance : 0;
-
-                // Cộng dồn vào biến tổng cộng footer
-                totalTamThu += tamThu;
-                totalChiPhiT7 += myCostSat;
-                totalChiPhiCN += myCostSun;
-                totalTongDong += tongDong;
-                totalPhaiThu += phaiThu;
-                totalXungQuy += xungQuy;
+                tTamThu += tamThu; tChiT7 += cT7; tChiCN += cCN; tTongDong += tDong;
+                if (bal < 0) tPhaiThu += Math.abs(bal); else tXungQuy += bal;
 
                 document.getElementById(`tamthu_${i}`).innerText = formatVND(tamThu);
-                document.getElementById(`chiphiT7_${i}`).innerText = ttT7 ? formatVND(myCostSat) : "-";
-                document.getElementById(`chiphiCN_${i}`).innerText = ttCN ? formatVND(myCostSun) : "-";
-                document.getElementById(`tongdong_${i}`).innerText = formatVND(tongDong);
-                document.getElementById(`phaithu_${i}`).innerText = formatVND(phaiThu);
-                document.getElementById(`xungquy_${i}`).innerText = formatVND(xungQuy);
+                document.getElementById(`chiphiT7_${i}`).innerText = cT7 ? formatVND(cT7) : "-";
+                document.getElementById(`chiphiCN_${i}`).innerText = cCN ? formatVND(cCN) : "-";
+                document.getElementById(`tongdong_${i}`).innerText = formatVND(tDong);
+                document.getElementById(`phaithu_${i}`).innerText = bal < 0 ? formatVND(Math.abs(bal)) : "0";
+                document.getElementById(`xungquy_${i}`).innerText = bal > 0 ? formatVND(bal) : "0";
             });
 
-            // Ghi dữ liệu dòng tổng cộng xuống bảng
-            document.getElementById('totalTamThu').innerText = formatVND(totalTamThu);
-            document.getElementById('totalChiPhiT7').innerText = formatVND(totalChiPhiT7);
-            document.getElementById('totalChiPhiCN').innerText = formatVND(totalChiPhiCN);
-            document.getElementById('totalTongDong').innerText = formatVND(totalTongDong);
-            document.getElementById('totalPhaiThu').innerText = formatVND(totalPhaiThu);
-            document.getElementById('totalXungQuy').innerText = formatVND(totalXungQuy);
+            document.getElementById('totalTamThu').innerText = formatVND(tTamThu);
+            document.getElementById('totalChiPhiT7').innerText = formatVND(tChiT7);
+            document.getElementById('totalChiPhiCN').innerText = formatVND(tChiCN);
+            document.getElementById('totalTongDong').innerText = formatVND(tTongDong);
+            document.getElementById('totalPhaiThu').innerText = formatVND(tPhaiThu);
+            document.getElementById('totalXungQuy').innerText = formatVND(tXungQuy);
 
-            // Xử lý Tính toán dòng tiền khối "Số dư Quỹ tuần"
-            let openingBalance = getPreviousWeekClosingBalance(m, w);
+            let opening = getPreviousWeekClosingBalance();
             let fundExpense = parseNum(document.getElementById('fundExpense').value);
-            let closingBalance = openingBalance + totalXungQuy - fundExpense;
+            let closing = opening + tXungQuy - fundExpense;
 
-            document.getElementById('fundOpening').innerText = formatVND(openingBalance);
-            document.getElementById('fundIncome').innerText = formatVND(totalXungQuy);
-            document.getElementById('fundClosing').innerText = formatVND(closingBalance);
+            document.getElementById('fundOpening').innerText = formatVND(opening);
+            document.getElementById('fundIncome').innerText = formatVND(tXungQuy);
+            document.getElementById('fundClosing').innerText = formatVND(closing);
 
-            // Lưu trạng thái tính toán quỹ để các tuần sau tham chiếu
-            if (appData.records[currentKey]) {
-                appData.records[currentKey].fundClosingBalance = closingBalance;
-            }
+            if (cloudData.records[currentKey]) cloudData.records[currentKey].fundClosingBalance = closing;
         }
 
-        initData();
+        function showStatus(text, bg, color) {
+            const el = document.getElementById('syncStatus');
+            el.innerText = text; el.style.background = bg; el.style.color = color; el.style.display = 'inline-block';
+        }
+
+        // Tự động tải dữ liệu tháng hiện tại khi mở ứng dụng lên
+        const currentMonth = new Date().getMonth() + 1;
+        document.getElementById('monthSelect').value = currentMonth;
+        loadData();
     </script>
 </body>
 </html>
