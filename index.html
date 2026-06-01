@@ -9,32 +9,56 @@
     
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f3f4f6; color: #333; margin: 0; }
-        .container { max-width: 1300px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #1e3a8a; }
-        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; }
+        .container { max-width: 1300px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; box-sizing: border-box; }
+        h2 { text-align: center; color: #1e3a8a; font-size: 24px; }
+        
+        /* Header controls */
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
+        .week-selector { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
         .week-selector select { padding: 8px; font-size: 15px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; margin-right: 10px; cursor: pointer; }
+        
+        /* Layout chi phí - Tự động xuống dòng khi màn hình hẹp */
         .cost-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .cost-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .cost-box h3 { margin-top: 0; color: #0f172a; font-size: 15px; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
-        .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
-        .input-group label { font-size: 13px; font-weight: bold; color: #475569;}
-        .input-group input { width: 110px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; }
+        .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;}
+        .input-group label { font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap;}
+        .input-group input { width: 110px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; font-size: 14px; }
+        
+        /* Table - Hỗ trợ kéo ngang trên điện thoại không làm vỡ khung */
         table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 5px; text-align: center; vertical-align: middle; }
         th { background-color: #3b82f6; color: white; position: sticky; top: 0; }
         tr:nth-child(even) { background-color: #f9fafb; }
         .col-group { border-right: 2px solid #94a3b8 !important; }
-        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-        .add-member-box { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; }
-        .add-member-box input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 200px; }
-        .btn-add { background: #3b82f6; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        
+        /* Add Member Box */
+        .add-member-box { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; flex-wrap: wrap; }
+        .add-member-box input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; min-width: 160px; }
+        .btn-add { background: #3b82f6; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; white-space: nowrap; }
         .btn-add:hover { background: #2563eb; }
-        .btn-remove { background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 3px 6px; font-size: 11px; margin-left: 8px; float: right; }
+        .btn-remove { background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 11px; margin-left: 8px; float: right; }
+        
         .btn { display: block; width: 100%; background: #16a34a; color: white; padding: 15px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
         .btn:hover { background: #15803d; }
         .highlight { font-weight: bold; color: #dc2626; }
         .highlight-green { font-weight: bold; color: #16a34a; }
         .status-cloud { font-size: 13px; font-weight: bold; color: #15803d; background: #dcfce7; padding: 5px 10px; border-radius: 20px; display: none; }
+        .warning { color: #854d0e; font-size: 12px; font-style: italic; display: block; text-align: center; margin-top: 10px; }
+
+        /* TỰ ĐỘNG CÂN CHỈNH KHI XEM TRÊN ĐIỆN THOẠI (Màn hình nhỏ hơn 768px) */
+        @media screen and (max-width: 768px) {
+            body { padding: 8px; }
+            .container { padding: 12px; }
+            h2 { font-size: 20px; }
+            .header-controls { flex-direction: column; align-items: flex-start; padding: 10px; }
+            .input-group input { width: 100% !important; max-width: 130px; }
+            table { font-size: 11px; } 
+            th, td { padding: 6px 3px; }
+            input[type="checkbox"] { width: 16px; height: 16px; }
+            .btn { padding: 12px; font-size: 15px; } }
     </style>
 </head>
 <body>
