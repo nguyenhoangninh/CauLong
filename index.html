@@ -16,6 +16,9 @@
         .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; }
         .week-selector { display: flex; gap: 5px; align-items: center; }
         .week-selector select { padding: 8px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; margin-right: 10px; cursor: pointer; }
+        .btn-copy-prev { background: #7c3aed; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap; }
+        .btn-copy-prev:hover { background: #6d28d9; }
+        .btn-copy-prev:disabled { background: #c4b5fd; cursor: not-allowed; }
         
         /* Layout chi phí và QR */
         .cost-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
@@ -72,6 +75,7 @@
                     <option value="1">Tuần 1</option><option value="2">Tuần 2</option><option value="3">Tuần 3</option><option value="4">Tuần 4</option><option value="5">Tuần 5</option>
                 </select>
                 <span id="syncStatus" class="status-cloud">Đã đồng bộ đám mây</span>
+                <button class="btn-copy-prev" id="btnCopyPrev" onclick="copyFromPreviousWeek()" title="Sao chép danh sách thành viên và chi phí từ tuần trước liền kề">📋 Copy từ tuần trước</button>
             </div>
             <div class="input-group">
                 <label>Phí tạm thu/buổi (VNĐ): &nbsp;</label>
@@ -183,8 +187,6 @@
         <div class="add-member-box">
             <input type="text" id="newMemberName" placeholder="Nhập tên người mới...">
             <button class="btn-add" onclick="addMember()">+ Thêm Người</button>
-            <button class="btn-add" style="background: #eab308; margin-left: auto;" onclick="copyPreviousWeek()">📋 Copy DS Tuần Trước</button>
-        </div>
         </div>
 
         <button class="btn" onclick="saveAndCalculate()">Chốt Sổ & Lưu Lên Đám Mây</button>
@@ -207,9 +209,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let globalMembers = ["C Thúy", "A Tâm", "Henry", "C Thảo", "A Chinh", "Hiếu", "Khánh", "Phương", "Quý", "Kiệt", "Vi", "Ninh", "C Tuyết"];
+        // DEFAULT members chỉ dùng khi tạo tuần mới hoàn toàn chưa có dữ liệu
+        const DEFAULT_MEMBERS = ["C Thúy", "A Tâm", "Henry", "C Thảo", "A Chinh", "Hiếu", "Khánh", "Phương", "Quý", "Kiệt", "Vi", "Ninh", "C Tuyết"];
+
         let cloudData = { records: {}, bankInfo: { id: "", account: "", name: "" } };
         let currentKey = '1_1';
+        // currentMembers là danh sách thành viên CỦA TUẦN HIỆN TẠI (độc lập)
+        let currentMembers = [];
 
         const formatVND = (num) => Math.round(num).toLocaleString('en-US');
         const parseNum = (val) => {
@@ -228,6 +234,25 @@
             calculate();
         }
 
+        function getKeyParts(key) {
+            const parts = key.split('_');
+            return { m: parseInt(parts[0]), w: parseInt(parts[1]) };
+        }
+
+        // Lấy key của tuần trước liền kề
+        function getPreviousKey(key) {
+            const { m, w } = getKeyParts(key);
+            if (w > 1) return m + '_' + (w - 1);
+            if (m === 1) return null;
+            // Tháng trước, tìm tuần cuối có dữ liệu
+            const prevM = m - 1;
+            for (let wk = 5; wk >= 1; wk--) {
+                const k = prevM + '_' + wk;
+                if (cloudData.records[k]) return k;
+            }
+            return prevM + '_1';
+        }
+
         function loadData() {
             const m = document.getElementById('monthSelect').value;
             const w = document.getElementById('weekSelect').value;
@@ -238,20 +263,37 @@
             db.ref('badminton_app').once('value').then((snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    if (data.globalMembers) globalMembers = data.globalMembers;
                     if (data.records) cloudData.records = data.records;
                     if (data.bankInfo) cloudData.bankInfo = data.bankInfo;
                 }
                 
-                // Đổ dữ liệu ngân hàng cũ lên ô nhập
                 if (cloudData.bankInfo) {
                     document.getElementById('bankId').value = cloudData.bankInfo.id || "";
                     document.getElementById('bankAccount').value = cloudData.bankInfo.account || "";
                     document.getElementById('bankName').value = cloudData.bankInfo.name || "";
                 }
 
+                // Nếu tuần này chưa có dữ liệu → tạo mới với DEFAULT_MEMBERS
+                if (!cloudData.records[currentKey]) {
+                    cloudData.records[currentKey] = {
+                        costs: { fee: 50000, sanT7: 0, cauT7: 0, khacT7: 0, sanCN: 0, cauCN: 0, khacCN: 0 },
+                        fundExpense: 0,
+                        fundClosingBalance: 0,
+                        members: [...DEFAULT_MEMBERS],
+                        membersData: {}
+                    };
+                } else {
+                    // Tương thích ngược: nếu record cũ chưa có members thì gán DEFAULT
+                    if (!cloudData.records[currentKey].members) {
+                        cloudData.records[currentKey].members = [...DEFAULT_MEMBERS];
+                    }
+                }
+
+                currentMembers = [...cloudData.records[currentKey].members];
+
                 renderUIElements();
-                updateQRCode(); // Vẽ mã QR nếu có sẵn thông tin tài khoản
+                updateQRCode();
+                updateCopyButton();
                 showStatus("Đã kết nối đám mây trực tuyến", "#dcfce7", "#15803d");
             }).catch(err => {
                 console.error(err);
@@ -259,7 +301,67 @@
             });
         }
 
-        // Hàm tự động cập nhật và hiển thị mã QR VietQR
+        // Cập nhật trạng thái nút Copy
+        function updateCopyButton() {
+            const btn = document.getElementById('btnCopyPrev');
+            const prevKey = getPreviousKey(currentKey);
+            if (prevKey && cloudData.records[prevKey]) {
+                btn.disabled = false;
+                const { m, w } = getKeyParts(prevKey);
+                btn.title = `Sao chép danh sách và chi phí từ Tuần ${w} Tháng ${m}`;
+            } else {
+                btn.disabled = true;
+                btn.title = 'Không có dữ liệu tuần trước để copy';
+            }
+        }
+
+        // Hàm copy từ tuần trước liền kề
+        function copyFromPreviousWeek() {
+            const prevKey = getPreviousKey(currentKey);
+            if (!prevKey || !cloudData.records[prevKey]) {
+                alert('Không tìm thấy dữ liệu tuần trước để copy!');
+                return;
+            }
+
+            const { m, w } = getKeyParts(prevKey);
+            const prevRecord = cloudData.records[prevKey];
+
+            const confirmMsg = `Copy danh sách thành viên và chi phí từ Tuần ${w} Tháng ${m} về tuần này?\n\n⚠️ Dữ liệu hiện tại của tuần này sẽ bị ghi đè.\n(Các tích chọn Dự kiến/Thực tế sẽ được reset về trống)`;
+            if (!confirm(confirmMsg)) return;
+
+            // Copy members (danh sách tên)
+            const copiedMembers = prevRecord.members ? [...prevRecord.members] : [...DEFAULT_MEMBERS];
+
+            // Copy chi phí, reset check-box thành viên
+            const newMembersData = {};
+            copiedMembers.forEach(name => {
+                newMembersData[name] = { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
+            });
+
+            const prevCosts = prevRecord.costs || {};
+
+            cloudData.records[currentKey] = {
+                costs: {
+                    fee: prevCosts.fee || 50000,
+                    sanT7: prevCosts.sanT7 || 0,
+                    cauT7: prevCosts.cauT7 || 0,
+                    khacT7: prevCosts.khacT7 || 0,
+                    sanCN: prevCosts.sanCN || 0,
+                    cauCN: prevCosts.cauCN || 0,
+                    khacCN: prevCosts.khacCN || 0
+                },
+                fundExpense: 0,
+                fundClosingBalance: 0,
+                members: copiedMembers,
+                membersData: newMembersData
+            };
+
+            currentMembers = [...copiedMembers];
+            renderUIElements();
+            saveToCloudSilent();
+            alert(`✅ Đã copy danh sách ${copiedMembers.length} thành viên và chi phí từ Tuần ${w} Tháng ${m}!`);
+        }
+
         function updateQRCode() {
             const bankId = document.getElementById('bankId').value.trim().toUpperCase();
             const bankAccount = document.getElementById('bankAccount').value.trim();
@@ -267,7 +369,6 @@
             const qrContainer = document.getElementById('qrContainer');
 
             if (bankId && bankAccount && bankName) {
-                // Tạo link ảnh QR bằng API VietQR chuẩn (mẫu compact tinh gọn)
                 const qrUrl = `https://img.vietqr.io/image/${bankId}-${bankAccount}-compact.png?accountName=${bankName}`;
                 qrContainer.innerHTML = `<img src="${qrUrl}" alt="Mã VietQR chuyển khoản">`;
             } else {
@@ -276,13 +377,6 @@
         }
 
         function renderUIElements() {
-            if (!cloudData.records[currentKey]) {
-                cloudData.records[currentKey] = {
-                    costs: { fee: 50000, sanT7: 0, cauT7: 0, khacT7: 0, sanCN: 0, cauCN: 0, khacCN: 0 },
-                    fundExpense: 0, fundClosingBalance: 0, membersData: {}
-                };
-            }
-
             const record = cloudData.records[currentKey];
             const c = record.costs;
 
@@ -298,7 +392,7 @@
             const tbody = document.querySelector('#memberTable tbody');
             tbody.innerHTML = '';
             
-            globalMembers.forEach((name, i) => {
+            currentMembers.forEach((name, i) => {
                 const md = record.membersData[name] || { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
                 tbody.innerHTML += `
                     <tr>
@@ -324,27 +418,12 @@
         }
 
         function getPreviousWeekClosingBalance() {
-            const m = document.getElementById('monthSelect').value;
-            const w = document.getElementById('weekSelect').value;
-            let prevM = parseInt(m), prevW = parseInt(w) - 1;
-            
-            if (prevW === 0) {
-                if (prevM === 1) return 0;
-                prevM = prevM - 1;
-                for (let wk = 5; wk >= 1; wk--) {
-                    let key = prevM + '_' + wk;
-                    if (cloudData.records[key] && cloudData.records[key].fundClosingBalance !== undefined) {
-                        return cloudData.records[key].fundClosingBalance;
-                    }
-                }
-                return 0;
-            } else {
-                let key = prevM + '_' + prevW;
-                if (cloudData.records[key] && cloudData.records[key].fundClosingBalance !== undefined) {
-                    return cloudData.records[key].fundClosingBalance;
-                }
-                return 0;
+            const prevKey = getPreviousKey(currentKey);
+            if (!prevKey) return 0;
+            if (cloudData.records[prevKey] && cloudData.records[prevKey].fundClosingBalance !== undefined) {
+                return cloudData.records[prevKey].fundClosingBalance;
             }
+            return 0;
         }
 
         function captureCurrentState() {
@@ -359,15 +438,17 @@
                 khacCN: parseNum(document.getElementById('khacCN').value),
             };
             cloudData.records[currentKey].fundExpense = parseNum(document.getElementById('fundExpense').value);
+            // Lưu danh sách thành viên của tuần này (độc lập)
+            cloudData.records[currentKey].members = [...currentMembers];
 
-            // Ghi nhận thông tin ngân hàng để đẩy lên mây
             cloudData.bankInfo = {
                 id: document.getElementById('bankId').value.trim().toUpperCase(),
                 account: document.getElementById('bankAccount').value.trim(),
                 name: document.getElementById('bankName').value.trim()
             };
 
-            globalMembers.forEach((name, i) => {
+            cloudData.records[currentKey].membersData = cloudData.records[currentKey].membersData || {};
+            currentMembers.forEach((name, i) => {
                 const elDkT7 = document.getElementById(`dkT7_${i}`);
                 if (elDkT7) {
                     cloudData.records[currentKey].membersData[name] = {
@@ -380,20 +461,24 @@
 
         function addMember() {
             const name = document.getElementById('newMemberName').value.trim();
-            if (name && !globalMembers.includes(name)) {
-                captureCurrentState();
-                globalMembers.push(name);
-                document.getElementById('newMemberName').value = '';
-                saveToCloudSilent();
-            } else if (globalMembers.includes(name)) { alert('Tên đã tồn tại!'); }
+            if (!name) return;
+            if (currentMembers.includes(name)) { alert('Tên đã tồn tại trong tuần này!'); return; }
+            captureCurrentState();
+            currentMembers.push(name);
+            cloudData.records[currentKey].members = [...currentMembers];
+            if (!cloudData.records[currentKey].membersData[name]) {
+                cloudData.records[currentKey].membersData[name] = { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
+            }
+            document.getElementById('newMemberName').value = '';
+            saveToCloudSilent();
         }
 
         function removeMember(name) {
-            if (confirm(`Bạn có chắc muốn xóa "${name}"?`)) {
-                captureCurrentState(); 
-                globalMembers = globalMembers.filter(n => n !== name);
-                saveToCloudSilent();
-            }
+            if (!confirm(`Bạn có chắc muốn xóa "${name}" khỏi tuần này?`)) return;
+            captureCurrentState();
+            currentMembers = currentMembers.filter(n => n !== name);
+            cloudData.records[currentKey].members = [...currentMembers];
+            saveToCloudSilent();
         }
 
         function saveAndCalculate() {
@@ -401,7 +486,6 @@
             showStatus("Đang lưu lên đám mây...", "#fef08a", "#a16207");
             
             db.ref('badminton_app').set({
-                globalMembers: globalMembers,
                 records: cloudData.records,
                 bankInfo: cloudData.bankInfo
             }).then(() => {
@@ -415,7 +499,6 @@
 
         function saveToCloudSilent() {
             db.ref('badminton_app').set({
-                globalMembers: globalMembers,
                 records: cloudData.records,
                 bankInfo: cloudData.bankInfo
             }).then(() => { renderUIElements(); });
@@ -430,7 +513,7 @@
             document.getElementById('tongCN').innerText = formatVND(totalCN);
 
             let actT7 = 0, actCN = 0;
-            globalMembers.forEach((name, i) => {
+            currentMembers.forEach((name, i) => {
                 if (document.getElementById(`ttT7_${i}`) && document.getElementById(`ttT7_${i}`).checked) actT7++;
                 if (document.getElementById(`ttCN_${i}`) && document.getElementById(`ttCN_${i}`).checked) actCN++;
             });
@@ -445,7 +528,7 @@
 
             let tTamThu = 0, tChiT7 = 0, tChiCN = 0, tTongDong = 0, tPhaiThu = 0, tXungQuy = 0;
 
-            globalMembers.forEach((name, i) => {
+            currentMembers.forEach((name, i) => {
                 const elDkT7 = document.getElementById(`dkT7_${i}`);
                 if (!elDkT7) return;
 
@@ -493,5 +576,6 @@
         document.getElementById('monthSelect').value = currentMonth;
         loadData();
     </script>
+
 </body>
 </html>
