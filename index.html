@@ -1,1061 +1,581 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎾 Tennis Manager</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<style>
-:root{
-  --bg:#f0f4ff;
-  --surface:#ffffff;
-  --surface2:#f7f9ff;
-  --border:#e2e8f7;
-  --accent:#7c6ee6;       /* violet */
-  --accent-lt:#ede9ff;
-  --accent2:#34c97a;      /* green */
-  --accent2-lt:#e6faf1;
-  --accent3:#3b9eff;      /* blue */
-  --accent3-lt:#e8f3ff;
-  --accent4:#ff7eb3;      /* pink */
-  --accent4-lt:#fff0f7;
-  --yellow:#f5c842;
-  --yellow-lt:#fffae8;
-  --text:#2d3260;
-  --muted:#8b93bc;
-  --danger:#ff5a6e;
-  --danger-lt:#fff0f2;
-  --shadow:0 2px 12px rgba(124,110,230,.10);
-  --shadow-md:0 4px 20px rgba(124,110,230,.14);
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;font-size:14px;}
-
-/* ─── HEADER ─── */
-header{
-  background:linear-gradient(135deg,#7c6ee6 0%,#a78bfa 50%,#c084fc 100%);
-  padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:62px;
-  position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(124,110,230,.3);
-}
-.logo{font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px;letter-spacing:-.3px;}
-.month-nav{display:flex;align-items:center;gap:10px;}
-.month-nav button{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;transition:.15s;font-weight:700;}
-.month-nav button:hover{background:rgba(255,255,255,.35);}
-#curMonthLbl{font-family:'DM Mono',monospace;font-size:14px;color:#fff;font-weight:600;min-width:110px;text-align:center;}
-#sync-status{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;margin-left:8px;}
-#sync-status.ok{background:rgba(52,201,122,.3);color:#fff;}
-#sync-status.saving{background:rgba(245,200,66,.3);color:#fff;}
-#sync-status.err{background:rgba(255,90,110,.3);color:#fff;}
-
-/* ─── TABS ─── */
-.tabs{display:flex;border-bottom:2px solid var(--border);background:var(--surface);padding:0 20px;gap:2px;overflow-x:auto;box-shadow:var(--shadow);}
-.tab{padding:11px 15px;cursor:pointer;font-size:13px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s;font-weight:700;white-space:nowrap;}
-.tab:hover{color:var(--accent);}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-
-/* ─── PANELS ─── */
-.panel{display:none;padding:22px;max-width:1100px;margin:0 auto;}
-.panel.active{display:block;}
-
-/* ─── CARDS & SECTIONS ─── */
-.sec{font-family:'Nunito',sans-serif;font-size:17px;font-weight:800;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow);}
-.card-pink{border-color:#ffd6e8;background:linear-gradient(135deg,#fff8fc 0%,#fff 100%);}
-.card-violet{border-color:#ddd6fe;background:linear-gradient(135deg,#faf8ff 0%,#fff 100%);}
-.card-green{border-color:#bbf7d0;background:linear-gradient(135deg,#f0fdf6 0%,#fff 100%);}
-.card-blue{border-color:#bfdbfe;background:linear-gradient(135deg,#eff8ff 0%,#fff 100%);}
-
-/* ─── FORMS ─── */
-.frow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;}
-.fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px;}
-.fg.n{flex:0 0 140px;min-width:120px;}
-.fg.w{flex:2;}
-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
-input,select,textarea{
-  background:var(--surface2);border:1.5px solid var(--border);color:var(--text);
-  padding:8px 12px;border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;
-  outline:none;transition:.15s;width:100%;font-weight:600;
-}
-input:focus,select:focus,textarea:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-lt);}
-input[type=number]{font-family:'DM Mono',monospace;}
-
-/* ─── CHIPS ─── */
-.chips{display:flex;flex-wrap:wrap;gap:7px;}
-.chip{display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:20px;cursor:pointer;transition:.15s;font-size:13px;font-weight:600;}
-.chip input{width:auto;padding:0;}
-.chip:has(input:checked){background:var(--accent-lt);border-color:var(--accent);color:var(--accent);}
-
-/* ─── BUTTONS ─── */
-.btn{padding:8px 18px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:.15s;white-space:nowrap;}
-.btn-p{background:linear-gradient(135deg,#7c6ee6,#a78bfa);color:#fff;box-shadow:0 2px 8px rgba(124,110,230,.3);}
-.btn-p:hover{box-shadow:0 4px 14px rgba(124,110,230,.4);transform:translateY(-1px);}
-.btn-s{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}
-.btn-s:hover{border-color:var(--accent);color:var(--accent);}
-.btn-green{background:linear-gradient(135deg,#34c97a,#22d3a0);color:#fff;box-shadow:0 2px 8px rgba(52,201,122,.3);}
-.btn-green:hover{box-shadow:0 4px 14px rgba(52,201,122,.4);transform:translateY(-1px);}
-.btn-pink{background:linear-gradient(135deg,#ff7eb3,#ff4d8d);color:#fff;box-shadow:0 2px 8px rgba(255,126,179,.3);}
-.btn-pink:hover{box-shadow:0 4px 14px rgba(255,126,179,.4);transform:translateY(-1px);}
-.btn-d{background:transparent;color:var(--danger);border:1.5px solid var(--danger);font-size:12px;padding:3px 9px;border-radius:8px;}
-.btn-d:hover{background:var(--danger-lt);}
-.btn-w{background:transparent;color:var(--accent);border:1.5px solid var(--accent);font-size:12px;padding:3px 9px;border-radius:8px;}
-.btn-w:hover{background:var(--accent-lt);}
-.btn-sm{padding:5px 12px;font-size:12px;}
-
-/* ─── TABLE ─── */
-.tw{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;}
-th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;border-bottom:2px solid var(--border);font-weight:700;background:var(--surface2);}
-td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-weight:600;}
-tfoot td{border-top:2px solid var(--accent);border-bottom:none;font-weight:800;color:var(--accent);background:var(--accent-lt);}
-tr:last-child td{border-bottom:none;}
-tr:hover td{background:var(--surface2);}
-.num{font-family:'DM Mono',monospace;text-align:right;}
-
-/* ─── TAGS ─── */
-.tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
-.tc{background:var(--accent3-lt);color:var(--accent3);}
-.tnc{background:var(--accent2-lt);color:var(--accent2);}
-.tp{background:var(--accent-lt);color:var(--accent);font-size:11px;padding:2px 7px;border-radius:10px;margin:1px;font-weight:700;}
-
-/* ─── STAT CARDS ─── */
-.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:18px;}
-.scard{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);}
-.scard.violet{border-color:#ddd6fe;background:linear-gradient(135deg,#faf8ff,#fff);}
-.scard.green{border-color:#bbf7d0;background:linear-gradient(135deg,#f0fdf6,#fff);}
-.scard.pink{border-color:#ffd6e8;background:linear-gradient(135deg,#fff8fc,#fff);}
-.scard.blue{border-color:#bfdbfe;background:linear-gradient(135deg,#eff8ff,#fff);}
-.slbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;font-weight:700;}
-.sval{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;}
-.ssub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600;}
-
-/* ─── STATUS BADGES ─── */
-.paid{color:var(--accent2);font-size:12px;font-weight:700;}
-.unpaid{color:var(--danger);font-size:12px;font-weight:700;}
-
-/* ─── MISC ─── */
-.split-row td{background:rgba(124,110,230,.02);}
-.mbadge{display:inline-block;padding:5px 13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:20px;font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);margin:0 6px 6px 0;cursor:pointer;transition:.15s;font-weight:600;}
-.mbadge:hover,.mbadge.cv{border-color:var(--accent);background:var(--accent-lt);}
-.empty{text-align:center;padding:36px;color:var(--muted);font-size:13px;}
-.ei{font-size:34px;margin-bottom:7px;}
-.mt{margin-top:14px;}
-.alert-info{background:var(--accent3-lt);border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px;color:var(--accent3);font-weight:600;}
-
-/* ─── CALENDAR ─── */
-.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-.chead{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:5px 0;text-transform:uppercase;}
-.cday{min-height:70px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:5px;}
-.cday.om{opacity:.35;}
-.cday.hs{border-color:#c4b5fd;background:var(--accent-lt);}
-.cday.td{border-color:var(--accent3);background:var(--accent3-lt);}
-.cdnum{font-size:12px;font-weight:700;margin-bottom:3px;color:var(--muted);}
-.cday.hs .cdnum{color:var(--accent);}
-.cpill{font-size:10px;background:var(--accent-lt);color:var(--accent);border-radius:4px;padding:1px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;}
-.cpill.nc{background:var(--accent2-lt);color:var(--accent2);}
-
-/* ─── DATE PICKER ─── */
-.dpgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:7px;}
-.dpd{text-align:center;padding:8px 3px;border-radius:8px;cursor:pointer;font-size:13px;border:1.5px solid transparent;background:var(--surface2);transition:.15s;font-weight:600;}
-.dpd:hover{border-color:var(--accent);color:var(--accent);}
-.dpd.sel{background:var(--accent-lt);border-color:var(--accent);color:var(--accent);font-weight:700;}
-.dpd.om{opacity:.3;pointer-events:none;}
-.dph{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:3px 0;}
-
-/* ─── MODAL ─── */
-.moverlay{position:fixed;inset:0;background:rgba(45,50,96,.4);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
-.modal{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:660px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-md);}
-.mtitle{font-size:18px;font-weight:800;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.mact{display:flex;gap:9px;margin-top:16px;justify-content:flex-end;}
-
-/* ─── PER-SESSION CARDS ─── */
-.ses-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);}
-.ses-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,var(--accent-lt),#fff);border-bottom:1.5px solid var(--border);flex-wrap:wrap;gap:8px;}
-.ses-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.ses-total{font-family:'DM Mono',monospace;font-size:16px;color:var(--accent);font-weight:800;white-space:nowrap;}
-.ses-ptotal{color:var(--accent);font-weight:800;}
-
-/* ─── PAYMENT SUMMARY CARDS ─── */
-.pay-person-card{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);
-  background:var(--surface);margin-bottom:10px;box-shadow:var(--shadow);
-  transition:.15s;
-}
-.pay-person-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md);}
-.pay-person-card.is-paid{background:var(--accent2-lt);border-color:#86efac;}
-
-/* ─── QR CODE AREA ─── */
-.qr-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;}
-.qr-box canvas,.qr-box img{border-radius:8px;}
-
-/* ─── UPLOAD AREA ─── */
-.upload-area{border:2px dashed var(--border);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:.15s;background:var(--surface2);}
-.upload-area:hover{border-color:var(--accent);background:var(--accent-lt);}
-.upload-area input{display:none;}
-.receipt-thumb{position:relative;display:inline-block;margin:5px;}
-.receipt-thumb img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px solid var(--border);cursor:pointer;}
-.receipt-thumb .del-btn{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;}
-
-/* ─── PDF SUMMARY ─── */
-#pdf-preview{background:#fff;border-radius:14px;padding:24px;border:1.5px solid var(--border);box-shadow:var(--shadow-md);}
-.pdf-header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--border);}
-.pdf-header h1{font-size:22px;font-weight:800;color:var(--accent);}
-.pdf-header p{color:var(--muted);font-size:13px;margin-top:4px;font-weight:600;}
-.pdf-section{margin-bottom:18px;}
-.pdf-section h3{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:10px;padding:6px 12px;background:var(--accent-lt);border-radius:8px;}
-.pdf-person-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:8px;background:var(--surface2);}
-.pdf-person-name{font-weight:700;font-size:15px;}
-.pdf-person-amount{font-family:'DM Mono',monospace;font-size:18px;font-weight:800;color:var(--accent);}
-.pdf-qr-grid{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
-.pdf-qr-item{text-align:center;}
-.pdf-qr-label{font-size:12px;color:var(--muted);font-weight:700;margin-top:6px;}
-
-@media print{
-  body *{visibility:hidden;}
-  #pdf-preview,#pdf-preview *{visibility:visible;}
-  #pdf-preview{position:fixed;inset:0;width:100%;border:none;border-radius:0;box-shadow:none;padding:20px;}
-}
-
-@media(max-width:600px){
-  .panel{padding:12px;}
-  header{padding:0 14px;}
-  .cday{min-height:50px;}
-  .cpill{display:none;}
-  .fg.n{flex:0 0 120px;min-width:110px;}
-  .ses-card-hdr{flex-direction:column;align-items:flex-start;}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Quản Lý Quỹ Cầu Lông</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f3f4f6; color: #333; margin: 0; width: 1300px; }
+        .container { width: 1260px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); box-sizing: border-box; }
+        h2 { text-align: center; color: #1e3a8a; font-size: 26px; margin-top: 5px; }
+        
+        /* Header controls */
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; }
+        .week-selector { display: flex; gap: 5px; align-items: center; }
+        .week-selector select { padding: 8px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; margin-right: 10px; cursor: pointer; }
+        .btn-copy-prev { background: #7c3aed; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap; }
+        .btn-copy-prev:hover { background: #6d28d9; }
+        .btn-copy-prev:disabled { background: #c4b5fd; cursor: not-allowed; }
+        
+        /* Layout chi phí và QR */
+        .cost-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+        .cost-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .cost-box h3 { margin-top: 0; color: #0f172a; font-size: 15px; text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
+        .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;}
+        .input-group label { font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap;}
+        .input-group input { width: 110px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; font-size: 14px; }
+        
+        /* Khối thông tin QR mới */
+        .qr-section { display: flex; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; gap: 20px; align-items: center; }
+        .qr-inputs { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .qr-display { width: 140px; height: 140px; border: 1px solid #cbd5e1; background: #fff; display: flex; justify-content: center; align-items: center; border-radius: 6px; overflow: hidden; }
+        .qr-display img { width: 100%; height: 100%; object-fit: contain; }
+        .qr-display span { font-size: 12px; color: #94a3b8; text-align: center; padding: 10px; }
+        
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 14px; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px 5px; text-align: center; vertical-align: middle; }
+        th { background-color: #3b82f6; color: white; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .col-group { border-right: 2px solid #94a3b8 !important; }
+        
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        
+        /* Add Member Box */
+        .add-member-box { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; }
+        .add-member-box input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 250px; font-size: 14px; }
+        .btn-add { background: #3b82f6; color: white; padding: 8px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; white-space: nowrap; font-size: 14px; }
+        .btn-add:hover { background: #2563eb; }
+        .btn-remove { background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 11px; margin-left: 8px; float: right; }
+        
+        .btn { display: block; width: 100%; background: #16a34a; color: white; padding: 15px; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn:hover { background: #15803d; }
+        .highlight { font-weight: bold; color: #dc2626; }
+        .highlight-green { font-weight: bold; color: #16a34a; }
+        .status-cloud { font-size: 13px; font-weight: bold; color: #15803d; background: #dcfce7; padding: 5px 10px; border-radius: 20px; display: none; }
+        .warning { color: #854d0e; font-size: 13px; font-style: italic; display: block; text-align: center; margin-top: 10px; }
+    </style>
 </head>
 <body>
-
-<header>
-  <div class="logo">🎾 Tennis Manager</div>
-  <div style="display:flex;align-items:center;gap:6px">
-    <span id="sync-status" class="ok">☁ Đã lưu</span>
-    <div class="month-nav">
-      <button onclick="changeMonth(-1)">‹</button>
-      <span id="curMonthLbl"></span>
-      <button onclick="changeMonth(1)">›</button>
-    </div>
-  </div>
-</header>
-
-<div class="tabs">
-  <div class="tab active" onclick="sw('sessions')">📋 Buổi Tập</div>
-  <div class="tab" onclick="sw('calendar')">📅 Lịch Tháng</div>
-  <div class="tab" onclick="sw('split')">💰 Chia Tiền</div>
-  <div class="tab" onclick="sw('payments')">✅ Thanh Toán</div>
-  <div class="tab" onclick="sw('summary')">📄 Tổng Hợp & PDF</div>
-  <div class="tab" onclick="sw('history')">🗂 Lịch Sử</div>
-  <div class="tab" onclick="sw('settings')">⚙️ Cài Đặt</div>
-</div>
-
-<!-- ═══ TAB: SESSIONS ═══ -->
-<div id="tab-sessions" class="panel active">
-  <div class="sec">🎾 Thêm Buổi Tập</div>
-  <div class="card card-violet">
-    <div class="alert-info">💡 Chọn gói ca từ Master Data → giá tự điền. Phí xe <strong>5.000đ/chiếc</strong>, chia đều người chơi.</div>
-    <div class="frow">
-      <div class="fg w"><label>Chọn gói ca tập</label><select id="s-template"></select></div>
-      <div class="fg n"><label>Có thầy?</label>
-        <select id="s-coach"><option value="yes">✅ Có thầy</option><option value="no">❌ Không thầy</option></select>
-      </div>
-      <div class="fg n"><label>Số xe gửi</label><input type="number" id="s-parking-count" value="0" min="0" max="20"></div>
-    </div>
-    <div class="frow">
-      <div class="fg w"><label>Người chơi buổi này</label><div class="chips" id="player-cbs"></div></div>
-    </div>
-    <div style="margin-top:10px">
-      <label style="display:block;margin-bottom:7px">Chọn ngày tập (có thể chọn nhiều)</label>
-      <div id="dp-wrap"></div>
-    </div>
-    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-p" onclick="addSession()">+ Thêm Buổi Tập</button>
-      <span id="sel-dates-lbl" style="font-size:12px;color:var(--muted);font-weight:600">Chưa chọn ngày nào</span>
-    </div>
-  </div>
-  <div class="sec mt">📋 Danh Sách — <span id="ses-month-title" style="font-size:15px;color:var(--muted)"></span></div>
-  <div class="card" style="padding:0">
-    <div class="tw"><table>
-      <thead><tr><th>Ngày</th><th>Ca Tập</th><th>Thầy</th><th class="num">Sân</th><th class="num">Thầy</th><th class="num">Tip</th><th class="num">Xe</th><th class="num">Tổng</th><th>Người chơi</th><th></th></tr></thead>
-      <tbody id="ses-body"></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- ═══ TAB: CALENDAR ═══ -->
-<div id="tab-calendar" class="panel">
-  <div class="sec">📅 Lịch Tháng — <span id="cal-title" style="font-size:15px;color:var(--muted)"></span></div>
-  <div class="card">
-    <div class="cgrid" id="cal-heads"></div>
-    <div style="height:6px"></div>
-    <div class="cgrid" id="cal-body"></div>
-  </div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:700">
-    <span>🔵 Hôm nay</span><span style="color:var(--accent)">🟣 Có thầy</span><span style="color:var(--accent2)">🟢 Không thầy</span>
-  </div>
-</div>
-
-<!-- ═══ TAB: SPLIT ═══ -->
-<div id="tab-split" class="panel">
-  <div class="sgrid" id="sum-cards"></div>
-  <div class="sec">🎾 Tiền Banh Tháng Này</div>
-  <div class="card card-green">
-    <div class="frow" style="align-items:flex-end">
-      <div class="fg n"><label>Tổng tiền banh (VND)</label><input type="number" id="ball-cost" placeholder="0" step="10000" oninput="saveBallCost()"></div>
-      <div class="fg w"><label>Chia cho</label><div class="chips" id="ball-players"></div></div>
-    </div>
-    <div id="ball-pp" style="font-size:12px;color:var(--accent2);margin-top:4px;font-weight:700"></div>
-  </div>
-  <div class="sec">💸 Ma Trận Chi Phí</div>
-  <div class="card" style="padding:0">
-    <div class="tw"><table>
-      <thead><tr>
-        <th>Người chơi</th>
-        <th class="num">💰 Sân + Thầy</th>
-        <th class="num">🫶 Tip</th>
-        <th class="num">🚗 Xe</th>
-        <th class="num">🎾 Banh</th>
-        <th class="num" style="color:var(--accent)">TỔNG</th>
-      </tr></thead>
-      <tbody id="split-body"></tbody>
-      <tfoot id="split-footer"></tfoot>
-    </table></div>
-  </div>
-  <div class="sec">🗒 Chi Tiết Theo Buổi</div>
-  <div id="per-session-detail"></div>
-</div>
-
-<!-- ═══ TAB: PAYMENTS ═══ -->
-<div id="tab-payments" class="panel">
-  <div class="sec">✅ Theo Dõi Thanh Toán</div>
-  <div class="card">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;font-weight:600">
-      Tháng <span id="pay-month-lbl" style="color:var(--accent);font-weight:800"></span> — Tick ✓ khi nhận đủ tiền
-    </div>
-    <div id="pay-list"></div>
-  </div>
-
-  <!-- Receipts upload section -->
-  <div class="sec">🧾 Phiếu Thanh Toán</div>
-  <div class="card card-blue">
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-weight:600">Upload ảnh chứng từ: biên lai tiền sân, tiền banh, chuyển khoản từ thành viên...</p>
-    <div class="upload-area" onclick="document.getElementById('receipt-input').click()">
-      <input type="file" id="receipt-input" accept="image/*" multiple onchange="handleReceiptUpload(event)">
-      <div style="font-size:28px;margin-bottom:6px">📸</div>
-      <div style="font-weight:700;color:var(--accent)">Nhấn để chọn ảnh</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;font-weight:600">Hỗ trợ JPG, PNG — lưu trên máy của bạn</div>
-    </div>
-    <div id="receipt-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px"></div>
-  </div>
-
-  <!-- Bank info -->
-  <div class="sec">🏦 Thông Tin Chuyển Khoản Của Tôi (người thu)</div>
-  <div class="card card-violet">
-    <div class="frow">
-      <div class="fg"><label>Tên ngân hàng</label><input type="text" id="bank-bank" placeholder="Techcombank"></div>
-      <div class="fg"><label>Số tài khoản</label><input type="text" id="bank-acc" placeholder="6230686868"></div>
-      <div class="fg"><label>Tên tài khoản</label><input type="text" id="bank-name" placeholder="Nguyen Hoang Ninh"></div>
-    </div>
-    <button class="btn btn-p btn-sm" onclick="saveBankInfo()">💾 Lưu & Tạo QR</button>
-    <div id="bank-disp" style="margin-top:14px"></div>
-    <div id="my-qr-wrap" style="margin-top:14px"></div>
-  </div>
-
-  <!-- Court bank info -->
-  <div class="sec">🏟 Thông Tin Chủ Sân (thanh toán sân)</div>
-  <div class="card card-pink">
-    <div class="frow">
-      <div class="fg"><label>Tên ngân hàng</label><input type="text" id="court-bank" placeholder="Vietcombank"></div>
-      <div class="fg"><label>Số tài khoản</label><input type="text" id="court-acc" placeholder="1234567890"></div>
-      <div class="fg"><label>Tên tài khoản</label><input type="text" id="court-name" placeholder="Tên chủ sân"></div>
-    </div>
-    <button class="btn btn-pink btn-sm" onclick="saveCourtInfo()">💾 Lưu & Tạo QR</button>
-    <div id="court-disp" style="margin-top:14px"></div>
-    <div id="court-qr-wrap" style="margin-top:14px"></div>
-  </div>
-</div>
-
-<!-- ═══ TAB: SUMMARY / PDF ═══ -->
-<div id="tab-summary" class="panel">
-  <div class="sec">📄 Bảng Tổng Hợp Tháng</div>
-  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-    <button class="btn btn-p" onclick="window.print()">🖨️ In / Lưu PDF</button>
-    <button class="btn btn-s" onclick="renderSummaryPDF()">🔄 Làm mới</button>
-  </div>
-  <div id="pdf-preview"></div>
-</div>
-
-<!-- ═══ TAB: HISTORY ═══ -->
-<div id="tab-history" class="panel">
-  <div class="sec">📈 Biểu Đồ Chi Phí Theo Tháng</div>
-  <div class="card" style="height:300px;padding:18px"><canvas id="historyChart"></canvas></div>
-  <div class="sec">📊 Bảng Thống Kê</div>
-  <div class="card" style="padding:0">
-    <div class="tw"><table>
-      <thead><tr><th>Tháng</th><th class="num">Buổi</th><th class="num">Sân+Thầy</th><th class="num">Tip+Xe</th><th class="num">Banh</th><th class="num">Tổng</th><th></th></tr></thead>
-      <tbody id="hist-body"></tbody>
-    </table></div>
-  </div>
-</div>
-
-<!-- ═══ TAB: SETTINGS ═══ -->
-<div id="tab-settings" class="panel">
-  <div class="sec">📋 Master Data — Gói & Bảng Giá</div>
-  <div class="card card-violet">
-    <input type="hidden" id="md-edit-id">
-    <div class="frow">
-      <div class="fg w"><label>Tên Ca / Gói</label><input type="text" id="md-name" placeholder="VD: Tối Cuối tuần (17h-22h)"></div>
-      <div class="fg n"><label>Giá Sân</label><input type="number" id="md-court" step="10000"></div>
-      <div class="fg n"><label>Giá Thầy</label><input type="number" id="md-coach" step="10000"></div>
-      <div class="fg n"><label>Tip</label><input type="number" id="md-tip" step="10000"></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      <button class="btn btn-p" id="btn-md-save" onclick="saveMD()">+ Thêm Gói Mới</button>
-      <button class="btn btn-s" id="btn-md-cancel" style="display:none" onclick="cancelMD()">Hủy Sửa</button>
-    </div>
-    <div class="tw"><table>
-      <thead><tr><th>Tên Gói</th><th class="num">Giá Sân</th><th class="num">Giá Thầy</th><th class="num">Tip</th><th></th></tr></thead>
-      <tbody id="md-body"></tbody>
-    </table></div>
-  </div>
-  <div class="sec">👥 Thành Viên</div>
-  <div class="card card-pink">
-    <div class="frow" style="align-items:flex-end">
-      <div class="fg"><label>Tên thành viên</label><input type="text" id="new-member" placeholder="Tên..."></div>
-      <button class="btn btn-pink" onclick="addMember()">+ Thêm</button>
-    </div>
-    <div id="member-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
-  </div>
-  <div class="sec">☁ Dữ Liệu & Firebase</div>
-  <div class="card card-blue">
-    <p style="color:var(--muted);font-size:13px;margin-bottom:12px;font-weight:600">Dữ liệu đồng bộ tự động qua Firebase. Mọi thành viên mở app đều thấy cập nhật mới nhất.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-s" onclick="exportData()">📤 Xuất JSON</button>
-      <button class="btn btn-s" onclick="document.getElementById('imp-file').click()">📥 Nhập JSON</button>
-      <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(event)">
-      <button class="btn btn-s" onclick="forceSync()">🔄 Đồng bộ thủ công</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ EDIT MODAL ═══ -->
-<div id="edit-modal" class="moverlay" style="display:none" onclick="closeModal(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="mtitle">✏️ Chỉnh Sửa Buổi (Ghi Đè Ngoại Lệ)</div>
-    <div class="alert-info">Dùng khi buổi đó phát sinh chi phí khác bình thường.</div>
-    <input type="hidden" id="edit-id">
-    <div class="frow">
-      <div class="fg n"><label>Ngày</label><input type="date" id="edit-date" readonly style="opacity:.6"></div>
-      <div class="fg n"><label>Ca tập</label><input type="text" id="edit-time" readonly style="opacity:.6"></div>
-      <div class="fg n"><label>Có thầy?</label><select id="edit-coach"><option value="yes">✅ Có thầy</option><option value="no">❌ Không thầy</option></select></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Giá sân</label><input type="number" id="edit-court" step="10000"></div>
-      <div class="fg"><label>Giá thầy</label><input type="number" id="edit-coachfee" step="10000"></div>
-      <div class="fg"><label>Tip</label><input type="number" id="edit-tip" step="10000"></div>
-      <div class="fg n"><label>Số xe</label><input type="number" id="edit-pcount" min="0"></div>
-    </div>
-    <div class="fg" style="margin-bottom:14px"><label>Người chơi</label><div class="chips" id="edit-player-cbs"></div></div>
-    <div class="mact">
-      <button class="btn btn-s" onclick="document.getElementById('edit-modal').style.display='none'">Hủy</button>
-      <button class="btn btn-p" onclick="saveEdit()">💾 Lưu Ghi Đè</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ IMAGE PREVIEW MODAL ═══ -->
-<div id="img-modal" class="moverlay" style="display:none" onclick="this.style.display='none'">
-  <img id="img-modal-src" style="max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:var(--shadow-md)">
-</div>
-
-<script>
-// ═══════════════════════════════════════
-// FIREBASE CONFIG
-// ═══════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyD8g-xlQVX60xLqMzQNe7g-Ec2S1APdT2k",
-  authDomain:        "quy-tennis.firebaseapp.com",
-  databaseURL:       "https://quy-tennis-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "quy-tennis",
-  storageBucket:     "quy-tennis.firebasestorage.app",
-  messagingSenderId: "507405738478",
-  appId:             "1:507405738478:web:7d0c4044a1e4bc75c02eff"
-};
-const PARKING_FEE = 5000;
-const DB_KEY      = 'tennis_mgr_v6';
-const FB_PATH     = 'tennis_data';
-
-// ═══════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════
-let state = {
-  members:    ['Thúy','Ví','Ninh','Khánh','Phương'],
-  months:     {},
-  masterData: [],
-  bankInfo:   {},
-  courtInfo:  {}
-};
-const DEFAULT_MASTER = [
-  { id:1, name:'Sáng thường (05-08h)',    court:120000, coach:200000, tip:50000 },
-  { id:2, name:'Ngày thường (08-17h)',    court:100000, coach:200000, tip:50000 },
-  { id:3, name:'Tối thường (17-22h)',     court:180000, coach:250000, tip:50000 },
-  { id:4, name:'Sáng cuối tuần (05-08h)',court:150000, coach:250000, tip:50000 },
-  { id:5, name:'Ngày cuối tuần (08-17h)',court:150000, coach:250000, tip:50000 },
-  { id:6, name:'Tối cuối tuần (17-22h)', court:200000, coach:250000, tip:50000 }
-];
-
-let curMonth    = '';
-let selDates    = new Set();
-let dpViewMonth = '';
-let chartInst   = null;
-let db          = null;
-// Receipts stored as base64 in localStorage only (not Firebase, too large)
-let receipts    = []; // [{id, dataUrl, name}]
-
-// ═══════════════════════════════════════
-// FIREBASE
-// ═══════════════════════════════════════
-function initFirebase() {
-  try {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.database();
-    setSS('saving','⏳ Đang tải...');
-    db.ref(FB_PATH).on('value', snap => {
-      const cloud = snap.val();
-      if (cloud && cloud.members) { state = cloud; if(!state.masterData?.length) state.masterData=DEFAULT_MASTER; ensureMonth(curMonth); render(); }
-      setSS('ok','☁ Đã lưu');
-    }, () => setSS('err','⚠ Offline'));
-  } catch(e) { console.warn(e); setSS('err','⚠ Offline'); }
-}
-function setSS(cls,text){ const el=document.getElementById('sync-status'); el.className=cls; el.textContent=text; }
-function save() {
-  try { localStorage.setItem(DB_KEY, JSON.stringify(state)); } catch(e){}
-  if (db) { setSS('saving','⏳ Đang lưu...'); db.ref(FB_PATH).set(state).then(()=>setSS('ok','☁ Đã lưu')).catch(()=>setSS('err','⚠ Lỗi')); }
-}
-function forceSync() {
-  if (!db) { alert('Chưa kết nối Firebase!'); return; }
-  db.ref(FB_PATH).once('value').then(s=>{ const c=s.val(); if(c&&c.members){state=c;render();} setSS('ok','☁ Đồng bộ xong'); }).catch(()=>setSS('err','⚠ Lỗi'));
-}
-
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
-function init() {
-  const saved = localStorage.getItem(DB_KEY);
-  if (saved) try { state = JSON.parse(saved); } catch(e){}
-  if (!state.masterData?.length) state.masterData = DEFAULT_MASTER;
-  if (!state.bankInfo)  state.bankInfo  = {};
-  if (!state.courtInfo) state.courtInfo = {};
-  // Load receipts from separate localStorage key (base64 images)
-  try { receipts = JSON.parse(localStorage.getItem('tennis_receipts_v1')||'[]'); } catch(e){ receipts=[]; }
-
-  const now = new Date();
-  curMonth    = ym(now.getFullYear(), now.getMonth()+1);
-  dpViewMonth = curMonth;
-  ensureMonth(curMonth);
-  render();
-  initFirebase();
-}
-
-// ═══════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════
-function ensureMonth(m) {
-  if (!state.months[m]) state.months[m] = { sessions:[], payments:{}, ballCost:0, ballPlayers:[] };
-}
-function cd()  { ensureMonth(curMonth); return state.months[curMonth]; }
-function ym(y,m,d) { const s=`${y}-${String(m).padStart(2,'0')}`; return d!==undefined?`${s}-${String(d).padStart(2,'0')}`:s; }
-function fmtMonth(m) { const [y,mo]=m.split('-'); return `Tháng ${parseInt(mo)}/${y}`; }
-function fmtDate(d)  { if(!d)return''; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
-function fmt(n)      { return n ? new Intl.NumberFormat('vi-VN').format(Math.round(n)) : '0'; }
-function fmtD(n)     { return (n&&n>0) ? fmt(n) : '—'; }
-function pn(v)       { return parseInt(String(v||0).replace(/[^0-9]/g,''))||0; }
-function dayName(ds) { return ['Chủ Nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][new Date(ds+'T00:00:00').getDay()]; }
-
-// ═══════════════════════════════════════
-// NAVIGATION & TABS
-// ═══════════════════════════════════════
-function changeMonth(dir) {
-  const [y,m]=curMonth.split('-').map(Number);
-  const d=new Date(y,m-1+dir,1);
-  curMonth=ym(d.getFullYear(),d.getMonth()+1);
-  dpViewMonth=curMonth; selDates.clear(); ensureMonth(curMonth); render();
-}
-function sw(name) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelector(`[onclick="sw('${name}')"]`).classList.add('active');
-  document.getElementById(`tab-${name}`).classList.add('active');
-  if(name==='split')    renderSplit();
-  if(name==='payments') renderPayments();
-  if(name==='calendar') renderCalendar();
-  if(name==='history')  renderHistory();
-  if(name==='settings') renderSettings();
-  if(name==='summary')  renderSummaryPDF();
-}
-
-// ═══════════════════════════════════════
-// FULL RENDER
-// ═══════════════════════════════════════
-function render() {
-  document.getElementById('curMonthLbl').textContent     = fmtMonth(curMonth);
-  document.getElementById('ses-month-title').textContent = fmtMonth(curMonth);
-  renderTemplateDropdown();
-  renderPlayerCbs('player-cbs');
-  renderDp();
-  renderSessionsTable();
-  renderBallCost();
-  renderSplit();
-  renderPayments();
-  renderBankDisp();
-  renderCourtDisp();
-  renderReceiptThumbs();
-  if(document.getElementById('tab-calendar').classList.contains('active')) renderCalendar();
-  if(document.getElementById('tab-settings').classList.contains('active')) renderSettings();
-}
-
-// ═══════════════════════════════════════
-// MASTER DATA
-// ═══════════════════════════════════════
-function renderSettings() {
-  const tbody = document.getElementById('md-body'); if(!tbody) return;
-  tbody.innerHTML = !state.masterData.length
-    ? `<tr><td colspan="5"><div class="empty"><div class="ei">📋</div>Chưa có gói</div></td></tr>`
-    : state.masterData.map(md=>`<tr>
-        <td><strong>${md.name}</strong></td>
-        <td class="num">${fmt(md.court)}</td>
-        <td class="num">${fmt(md.coach)}</td>
-        <td class="num">${fmt(md.tip)}</td>
-        <td style="display:flex;gap:4px;justify-content:flex-end">
-          <button class="btn btn-w btn-sm" onclick="editMD(${md.id})">✏️</button>
-          <button class="btn btn-d btn-sm" onclick="deleteMD(${md.id})">✕</button>
-        </td></tr>`).join('');
-  const ml=document.getElementById('member-list'); if(ml)
-    ml.innerHTML=state.members.map((m,i)=>`
-      <div style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:7px 12px;font-size:13px;font-weight:700">
-        <span style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span>${m}
-        <button class="btn btn-d btn-sm" onclick="removeMember(${i})">✕</button></div>`).join('');
-}
-function saveMD() {
-  const id=document.getElementById('md-edit-id').value, name=document.getElementById('md-name').value.trim();
-  const court=pn(document.getElementById('md-court').value), coach=pn(document.getElementById('md-coach').value), tip=pn(document.getElementById('md-tip').value);
-  if(!name){alert('Nhập tên gói!');return;}
-  if(id){const md=state.masterData.find(x=>x.id===parseInt(id));if(md)Object.assign(md,{name,court,coach,tip});}
-  else state.masterData.push({id:Date.now(),name,court,coach,tip});
-  save();cancelMD();renderSettings();renderTemplateDropdown();
-}
-function editMD(id) {
-  const md=state.masterData.find(x=>x.id===id);if(!md)return;
-  document.getElementById('md-edit-id').value=id; document.getElementById('md-name').value=md.name;
-  document.getElementById('md-court').value=md.court; document.getElementById('md-coach').value=md.coach;
-  document.getElementById('md-tip').value=md.tip;
-  document.getElementById('btn-md-save').textContent='💾 Cập Nhật';
-  document.getElementById('btn-md-cancel').style.display='inline-block';
-}
-function cancelMD() {
-  ['md-edit-id','md-name','md-court','md-coach','md-tip'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('btn-md-save').textContent='+ Thêm Gói Mới';
-  document.getElementById('btn-md-cancel').style.display='none';
-}
-function deleteMD(id){if(!confirm('Xóa gói này?'))return;state.masterData=state.masterData.filter(x=>x.id!==id);save();renderSettings();renderTemplateDropdown();}
-function renderTemplateDropdown(){
-  const sel=document.getElementById('s-template');if(!sel)return;
-  sel.innerHTML=state.masterData.length
-    ? state.masterData.map(md=>`<option value="${md.id}">${md.name} — Sân: ${fmt(md.court)} | Tip: ${fmt(md.tip)}</option>`).join('')
-    : `<option value="">-- Vào Cài Đặt để thêm gói --</option>`;
-}
-function addMember(){
-  const n=document.getElementById('new-member').value.trim();
-  if(!n||state.members.includes(n)){alert(n?'Tên đã tồn tại!':'Nhập tên!');return;}
-  state.members.push(n);document.getElementById('new-member').value='';
-  save();renderSettings();renderPlayerCbs('player-cbs');renderBallCost();
-}
-function removeMember(i){if(!confirm(`Xóa ${state.members[i]}?`))return;state.members.splice(i,1);save();render();}
-
-// ═══════════════════════════════════════
-// DATE PICKER
-// ═══════════════════════════════════════
-function renderDp(){
-  const [y,m]=dpViewMonth.split('-').map(Number);
-  const fd=new Date(y,m-1,1).getDay(), dim=new Date(y,m,0).getDate(), pd=new Date(y,m-1,0).getDate();
-  const today=ym(new Date().getFullYear(),new Date().getMonth()+1,new Date().getDate());
-  let html=`<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
-    <button class="btn btn-s btn-sm" onclick="dpShift(-1)">‹</button>
-    <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:700">${fmtMonth(dpViewMonth)}</span>
-    <button class="btn btn-s btn-sm" onclick="dpShift(1)">›</button>
-    <button class="btn btn-s btn-sm" onclick="selDates.clear();renderDp();updLbl()" style="margin-left:6px">Bỏ hết</button>
-  </div><div class="dpgrid">`;
-  ['CN','T2','T3','T4','T5','T6','T7'].forEach(d=>html+=`<div class="dph">${d}</div>`);
-  for(let i=0;i<fd;i++) html+=`<div class="dpd om">${pd-fd+1+i}</div>`;
-  for(let d=1;d<=dim;d++){const ds=ym(y,m,d);html+=`<div class="dpd${selDates.has(ds)?' sel':''}${ds===today?' today':''}" onclick="togDate('${ds}')">${d}</div>`;}
-  const rem=(fd+dim)%7===0?0:7-(fd+dim)%7;
-  for(let d=1;d<=rem;d++) html+=`<div class="dpd om">${d}</div>`;
-  document.getElementById('dp-wrap').innerHTML=html+'</div>';
-  updLbl();
-}
-function dpShift(dir){const[y,m]=dpViewMonth.split('-').map(Number);const d=new Date(y,m-1+dir,1);dpViewMonth=ym(d.getFullYear(),d.getMonth()+1);renderDp();}
-function togDate(ds){selDates.has(ds)?selDates.delete(ds):selDates.add(ds);renderDp();}
-function updLbl(){const el=document.getElementById('sel-dates-lbl');if(!el)return;el.textContent=selDates.size?`Đã chọn ${selDates.size} ngày: ${[...selDates].sort().map(fmtDate).join(', ')}`:'Chưa chọn ngày nào';}
-
-// ═══════════════════════════════════════
-// PLAYER CHIPS
-// ═══════════════════════════════════════
-function renderPlayerCbs(id,checked=null){
-  const c=document.getElementById(id);if(!c)return;
-  c.innerHTML=state.members.map(m=>`<label class="chip"><input type="checkbox" value="${m}" ${checked&&checked.has(m)?'checked':''}> ${m}</label>`).join('');
-}
-
-// ═══════════════════════════════════════
-// SESSIONS
-// ═══════════════════════════════════════
-function addSession(){
-  if(!selDates.size){alert('Chọn ít nhất 1 ngày!');return;}
-  const tid=parseInt(document.getElementById('s-template').value);if(!tid){alert('Chọn gói ca tập!');return;}
-  const tmpl=state.masterData.find(t=>t.id===tid);if(!tmpl){alert('Gói không hợp lệ!');return;}
-  const hasCoach=document.getElementById('s-coach').value==='yes';
-  const parkCount=pn(document.getElementById('s-parking-count').value);
-  const players=[...document.querySelectorAll('#player-cbs input:checked')].map(c=>c.value);
-  if(!players.length){alert('Chọn ít nhất 1 người chơi!');return;}
-  const courtFee=tmpl.court, coachFee=hasCoach?tmpl.coach:0, tip=hasCoach?tmpl.tip:0;
-  const parkTotal=parkCount*PARKING_FEE, total=courtFee+coachFee+tip+parkTotal;
-  [...selDates].sort().forEach(date=>{
-    const mk=date.slice(0,7);ensureMonth(mk);
-    state.months[mk].sessions.push({id:Date.now()+Math.random(),date,day:dayName(date),time:tmpl.name,templateId:tid,hasCoach,courtFee,coachFee,tip,parkCount,parkFeeEach:PARKING_FEE,parkTotal,total,players});
-    state.months[mk].sessions.sort((a,b)=>a.date.localeCompare(b.date));
-  });
-  save();selDates.clear();document.getElementById('s-parking-count').value='0';
-  renderPlayerCbs('player-cbs');renderDp();renderSessionsTable();renderSplit();
-}
-function deleteSession(id){
-  if(!confirm('Xóa buổi này?'))return;
-  cd().sessions=cd().sessions.filter(s=>s.id!==id);save();renderSessionsTable();renderSplit();
-  if(document.getElementById('tab-calendar').classList.contains('active'))renderCalendar();
-}
-function renderSessionsTable(){
-  const sessions=cd().sessions,tbody=document.getElementById('ses-body');
-  if(!sessions.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="ei">🎾</div>Chưa có buổi nào tháng này</div></td></tr>`;return;}
-  tbody.innerHTML=sessions.map(s=>`<tr>
-    <td><span style="font-family:'DM Mono',monospace;font-size:12px">${fmtDate(s.date)}</span><br><span style="color:var(--muted);font-size:11px">${s.day}</span></td>
-    <td style="font-size:13px">${s.time}</td>
-    <td><span class="tag ${s.hasCoach?'tc':'tnc'}">${s.hasCoach?'Có thầy':'Không thầy'}</span></td>
-    <td class="num">${fmt(s.courtFee)}</td>
-    <td class="num">${fmtD(s.coachFee)}</td>
-    <td class="num">${fmtD(s.tip)}</td>
-    <td class="num">${s.parkTotal?`${s.parkCount}xe×5k`:'—'}</td>
-    <td class="num" style="color:var(--accent);font-weight:800">${fmt(s.total)}</td>
-    <td>${s.players.map(p=>`<span class="tp">${p}</span>`).join('')}</td>
-    <td style="display:flex;gap:4px;justify-content:flex-end">
-      <button class="btn btn-w btn-sm" onclick="openEdit(${s.id})">✏️</button>
-      <button class="btn btn-d btn-sm" onclick="deleteSession(${s.id})">✕</button>
-    </td></tr>`).join('');
-}
-
-// ═══════════════════════════════════════
-// EDIT MODAL
-// ═══════════════════════════════════════
-function openEdit(id){
-  const s=cd().sessions.find(x=>x.id===id);if(!s)return;
-  document.getElementById('edit-id').value=id;document.getElementById('edit-date').value=s.date;
-  document.getElementById('edit-time').value=s.time;document.getElementById('edit-coach').value=s.hasCoach?'yes':'no';
-  document.getElementById('edit-court').value=s.courtFee;document.getElementById('edit-coachfee').value=s.coachFee||0;
-  document.getElementById('edit-tip').value=s.tip||0;document.getElementById('edit-pcount').value=s.parkCount||0;
-  renderPlayerCbs('edit-player-cbs',new Set(s.players));
-  document.getElementById('edit-modal').style.display='flex';
-}
-function closeModal(e){if(e.target===document.getElementById('edit-modal'))document.getElementById('edit-modal').style.display='none';}
-function saveEdit(){
-  const id=parseFloat(document.getElementById('edit-id').value),s=cd().sessions.find(x=>x.id===id);if(!s)return;
-  s.hasCoach=document.getElementById('edit-coach').value==='yes';
-  s.courtFee=pn(document.getElementById('edit-court').value);
-  s.coachFee=s.hasCoach?pn(document.getElementById('edit-coachfee').value):0;
-  s.tip=pn(document.getElementById('edit-tip').value);
-  s.parkCount=pn(document.getElementById('edit-pcount').value);s.parkFeeEach=PARKING_FEE;s.parkTotal=s.parkCount*PARKING_FEE;
-  s.players=[...document.querySelectorAll('#edit-player-cbs input:checked')].map(c=>c.value);
-  s.total=s.courtFee+s.coachFee+s.tip+s.parkTotal;
-  save();document.getElementById('edit-modal').style.display='none';renderSessionsTable();renderSplit();
-}
-
-// ═══════════════════════════════════════
-// CALENDAR
-// ═══════════════════════════════════════
-function renderCalendar(){
-  const el=document.getElementById('cal-title');if(el)el.textContent=fmtMonth(curMonth);
-  const [y,m]=curMonth.split('-').map(Number),fd=new Date(y,m-1,1).getDay(),days=new Date(y,m,0).getDate();
-  const today=ym(new Date().getFullYear(),new Date().getMonth()+1,new Date().getDate());
-  document.getElementById('cal-heads').innerHTML=['CN','T2','T3','T4','T5','T6','T7'].map(d=>`<div class="chead">${d}</div>`).join('');
-  const byDate={};(cd().sessions||[]).forEach(s=>{(byDate[s.date]=byDate[s.date]||[]).push(s);});
-  let html='';
-  for(let i=0;i<fd;i++) html+=`<div class="cday om"></div>`;
-  for(let d=1;d<=days;d++){const ds=ym(y,m,d),ss=byDate[ds]||[];html+=`<div class="cday${ss.length?' hs':''}${ds===today?' td':''}"><div class="cdnum">${d}</div>${ss.map(s=>`<div class="cpill${s.hasCoach?'':' nc'}">${s.time}: ${fmt(s.total)}</div>`).join('')}</div>`;}
-  document.getElementById('cal-body').innerHTML=html;
-}
-
-// ═══════════════════════════════════════
-// BALL COST
-// ═══════════════════════════════════════
-function renderBallCost(){
-  const data=cd(),ballEl=document.getElementById('ball-cost');if(ballEl)ballEl.value=data.ballCost||0;
-  const bpEl=document.getElementById('ball-players');if(!bpEl)return;
-  const checked=new Set(data.ballPlayers?.length?data.ballPlayers:state.members);
-  bpEl.innerHTML=state.members.map(m=>`<label class="chip"><input type="checkbox" value="${m}" ${checked.has(m)?'checked':''} onchange="saveBallCost()"> ${m}</label>`).join('');
-  updateBallPP();
-}
-function saveBallCost(){cd().ballCost=pn(document.getElementById('ball-cost')?.value||0);cd().ballPlayers=[...document.querySelectorAll('#ball-players input:checked')].map(c=>c.value);save();updateBallPP();renderSplit();}
-function updateBallPP(){const el=document.getElementById('ball-pp');if(!el)return;const cost=cd().ballCost,p=cd().ballPlayers||[];el.textContent=(cost&&p.length)?`→ Mỗi người: ${fmt(Math.round(cost/p.length))} (${p.length} người)`:'';}
-
-// ═══════════════════════════════════════
-// SPLIT
-// ═══════════════════════════════════════
-function calcSplit(){
-  const sessions=cd().sessions,data=cd(),mt={};
-  state.members.forEach(m=>mt[m]={sessions:0,courtCoach:0,tip:0,parking:0,ball:0,total:0});
-  sessions.forEach(s=>{
-    const n=s.players.length,cc=(s.courtFee+s.coachFee)/n,tp=s.tip/n,pk=(s.parkTotal||0)/n;
-    s.players.forEach(p=>{if(!mt[p])mt[p]={sessions:0,courtCoach:0,tip:0,parking:0,ball:0,total:0};mt[p].sessions++;mt[p].courtCoach+=cc;mt[p].tip+=tp;mt[p].parking+=pk;});
-  });
-  const bc=data.ballCost||0,bp=data.ballPlayers||[];
-  if(bc&&bp.length){const pp=bc/bp.length;bp.forEach(p=>{if(!mt[p])mt[p]={sessions:0,courtCoach:0,tip:0,parking:0,ball:0,total:0};mt[p].ball+=pp;});}
-  Object.values(mt).forEach(v=>v.total=v.courtCoach+v.tip+v.parking+v.ball);
-  return mt;
-}
-function renderSplit(){
-  if(!document.getElementById('tab-split').classList.contains('active'))return;
-  renderBallCost();
-  const totals=calcSplit(),active=Object.entries(totals).filter(([,v])=>v.sessions>0||v.ball>0).sort((a,b)=>b[1].total-a[1].total);
-  const payments=cd().payments,sessions=cd().sessions;
-  const sumTotal=active.reduce((s,[,v])=>s+v.total,0);
-  document.getElementById('sum-cards').innerHTML=`
-    <div class="scard violet"><div class="slbl">Tổng chi phí</div><div class="sval" style="color:var(--accent)">${fmt(sumTotal)}</div><div class="ssub">${fmtMonth(curMonth)}</div></div>
-    <div class="scard green"><div class="slbl">Số buổi</div><div class="sval" style="color:var(--accent2)">${sessions.length}</div><div class="ssub">buổi tập</div></div>
-    <div class="scard pink"><div class="slbl">Đã thanh toán</div><div class="sval" style="color:var(--accent4)">${Object.values(payments).filter(v=>v).length}/${active.length}</div><div class="ssub">người</div></div>`;
-  let sc=0,st=0,sp=0,sb=0,sa=0,htmlRows='';
-  active.forEach(([name,v])=>{sc+=v.courtCoach;st+=v.tip;sp+=v.parking;sb+=v.ball;sa+=v.total;
-    htmlRows+=`<tr class="split-row">
-      <td><strong>${name}</strong> <span style="color:var(--muted);font-size:11px">(${v.sessions} buổi)</span>
-        <span class="${payments[name]?'paid':'unpaid'}" style="margin-left:6px">${payments[name]?'✓ Đã đóng':'⏳ Chưa'}</span></td>
-      <td class="num">${fmt(Math.round(v.courtCoach))}</td>
-      <td class="num">${fmtD(Math.round(v.tip))}</td>
-      <td class="num">${fmtD(Math.round(v.parking))}</td>
-      <td class="num">${fmtD(Math.round(v.ball))}</td>
-      <td class="num" style="color:var(--accent);font-weight:800;font-size:15px">${fmt(Math.round(v.total))}</td></tr>`;
-  });
-  if(!active.length) htmlRows=`<tr><td colspan="6"><div class="empty"><div class="ei">💸</div>Chưa có dữ liệu</div></td></tr>`;
-  document.getElementById('split-body').innerHTML=htmlRows;
-  document.getElementById('split-footer').innerHTML=active.length?`<tr><td>📊 TỔNG</td><td class="num">${fmt(Math.round(sc))}</td><td class="num">${fmt(Math.round(st))}</td><td class="num">${fmt(Math.round(sp))}</td><td class="num">${fmt(Math.round(sb))}</td><td class="num">${fmt(Math.round(sa))}</td></tr>`:'';
-  renderPerSessionDetail(sessions);
-}
-function renderPerSessionDetail(sessions){
-  const c=document.getElementById('per-session-detail');if(!c)return;
-  if(!sessions?.length){c.innerHTML='';return;}
-  c.innerHTML=sessions.map(s=>{
-    const n=s.players.length,cpp=(s.courtFee+s.coachFee)/n,tpp=s.tip/n,ppp=(s.parkTotal||0)/n;
-    return `<div class="ses-card">
-      <div class="ses-card-hdr">
-        <div class="ses-card-meta">
-          <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:700">${fmtDate(s.date)}</span>
-          <span style="color:var(--muted);font-size:13px;font-weight:600">${s.day}</span>
-          <span style="color:var(--muted);font-size:13px;font-weight:600">${s.time}</span>
-          <span class="tag ${s.hasCoach?'tc':'tnc'}">${s.hasCoach?'Có thầy':'Không thầy'}</span>
-          ${s.parkCount?`<span style="color:var(--muted);font-size:12px;font-weight:600">🚗 ${s.parkCount} xe</span>`:''}
+    <div class="container">
+        <h2>Hệ Thống Tính Tiền Cầu Lông</h2>
+        
+        <div class="header-controls">
+            <div class="week-selector">
+                <label><strong>Kỳ tính toán: </strong></label>
+                <select id="monthSelect" onchange="loadData()">
+                    <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option><option value="4">Tháng 4</option>
+                    <option value="5">Tháng 5</option><option value="6">Tháng 6</option><option value="7">Tháng 7</option><option value="8">Tháng 8</option>
+                    <option value="9">Tháng 9</option><option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                </select>
+                <select id="weekSelect" onchange="loadData()">
+                    <option value="1">Tuần 1</option><option value="2">Tuần 2</option><option value="3">Tuần 3</option><option value="4">Tuần 4</option><option value="5">Tuần 5</option>
+                </select>
+                <span id="syncStatus" class="status-cloud">Đã đồng bộ đám mây</span>
+                <button class="btn-copy-prev" id="btnCopyPrev" onclick="copyFromPreviousWeek()" title="Sao chép danh sách thành viên và chi phí từ tuần trước liền kề">📋 Copy từ tuần trước</button>
+            </div>
+            <div class="input-group">
+                <label>Phí tạm thu/buổi (VNĐ): &nbsp;</label>
+                <input type="text" id="feePerSession" value="50,000" oninput="formatInput(this)">
+            </div>
         </div>
-        <div class="ses-total">${fmt(s.total)}</div>
-      </div>
-      <div class="tw"><table>
-        <thead><tr><th>Người chơi</th><th class="num">Sân + Thầy</th><th class="num">Tip</th><th class="num">Xe (chia đều)</th><th class="num" style="color:var(--accent)">Cộng</th></tr></thead>
-        <tbody>${s.players.map(p=>`<tr><td style="font-weight:700">${p}</td><td class="num">${fmt(Math.round(cpp))}</td><td class="num">${tpp?fmt(Math.round(tpp)):'—'}</td><td class="num">${ppp?fmt(Math.round(ppp)):'—'}</td><td class="num ses-ptotal">${fmt(Math.round(cpp+tpp+ppp))}</td></tr>`).join('')}</tbody>
-      </table></div></div>`;
-  }).join('');
-}
 
-// ═══════════════════════════════════════
-// PAYMENTS
-// ═══════════════════════════════════════
-function renderPayments(){
-  if(!document.getElementById('tab-payments').classList.contains('active'))return;
-  document.getElementById('pay-month-lbl').textContent=fmtMonth(curMonth);
-  const totals=calcSplit(),payments=cd().payments;
-  const active=Object.entries(totals).filter(([,v])=>v.sessions>0||v.ball>0).sort((a,b)=>b[1].total-a[1].total);
-  const el=document.getElementById('pay-list');
-  if(!active.length){el.innerHTML=`<div class="empty"><div class="ei">✅</div>Chưa có dữ liệu</div>`;return;}
-  el.innerHTML=active.map(([name,v])=>`
-    <div class="pay-person-card ${payments[name]?'is-paid':''}">
-      <div style="display:flex;align-items:center;gap:12px">
-        <input type="checkbox" ${payments[name]?'checked':''} onchange="togPay('${name}')" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent2)">
+        <div class="cost-section">
+            <div class="cost-box">
+                <h3>Chi phí Thứ 7</h3>
+                <div class="input-group"><label>Tiền sân:</label><input type="text" id="sanT7" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Tiền cầu:</label><input type="text" id="cauT7" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Chi phí khác:</label><input type="text" id="khacT7" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                    <label>Tổng T7:</label><strong id="tongT7" style="color: #0284c7;">0</strong>
+                </div>
+            </div>
+
+            <div class="cost-box">
+                <h3>Chi phí Chủ Nhật</h3>
+                <div class="input-group"><label>Tiền sân:</label><input type="text" id="sanCN" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Tiền cầu:</label><input type="text" id="cauCN" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group"><label>Chi phí khác:</label><input type="text" id="khacCN" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                    <label>Tổng CN:</label><strong id="tongCN" style="color: #b91c1c;">0</strong>
+                </div>
+            </div>
+            
+            <div class="cost-box" style="background: #fef08a;">
+                <h3>Thống kê Thực Tế</h3>
+                <div class="input-group"><label>Sĩ số T7:</label><strong id="sisoT7">0 người</strong></div>
+                <div class="input-group"><label>Bình quân T7:</label><strong id="bqT7" style="color: #0284c7;">0 đ/người</strong></div>
+                <div class="input-group" style="margin-top: 15px;"><label>Sĩ số CN:</label><strong id="sisoCN">0 người</strong></div>
+                <div class="input-group"><label>Bình quân CN:</label><strong id="bqCN" style="color: #b91c1c;">0 đ/người</strong></div>
+            </div>
+
+            <div class="cost-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+                <h3>Số dư Quỹ tuần</h3>
+                <div class="input-group"><label>Số dư đầu tuần:</label><strong id="fundOpening">0</strong></div>
+                <div class="input-group"><label>Thu trong kỳ (Quỹ):</label><strong id="fundIncome" style="color: #16a34a;">0</strong></div>
+                <div class="input-group"><label>Chi trong kỳ (Tay):</label><input type="text" id="fundExpense" value="0" oninput="formatInput(this)"></div>
+                <div class="input-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                    <label>Số dư cuối tuần:</label><strong id="fundClosing" style="color: #15803d; font-size: 16px;">0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="qr-section">
+            <div style="flex: 1;">
+                <h3 style="margin-top: 0; font-size: 15px; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px;">Cấu hình Tài khoản nhận tiền (Quét QR mã VietQR)</h3>
+                <div class="qr-inputs">
+                    <div class="input-group" style="justify-content: flex-start; gap: 5px;">
+                        <label style="width: 100px;">Mã Ngân hàng:</label>
+                        <input type="text" id="bankId" placeholder="Ví dụ: TCB, VCB, MB" style="width: 100%; text-align: left;" oninput="updateQRCode()">
+                    </div>
+                    <div class="input-group" style="justify-content: flex-start; gap: 5px;">
+                        <label style="width: 100px;">Số tài khoản:</label>
+                        <input type="text" id="bankAccount" placeholder="Nhập số tài khoản" style="width: 100%; text-align: left;" oninput="updateQRCode()">
+                    </div>
+                    <div class="input-group" style="justify-content: flex-start; gap: 5px; grid-column: span 2;">
+                        <label style="width: 100px;">Tên chủ thẻ:</label>
+                        <input type="text" id="bankName" placeholder="Nhập tên không dấu (Ví dụ: NGUYEN HOANG NINH)" style="width: 100%; text-align: left;" oninput="updateQRCode()">
+                    </div>
+                </div>
+                <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b; font-style: italic;">* Nhập đủ 3 thông tin trên để hệ thống tự tạo mã quét QR nạp/đóng quỹ nhanh.</p>
+            </div>
+            <div class="qr-display" id="qrContainer">
+                <span>Vui lòng điền thông tin tài khoản bên cạnh để tạo mã QR</span>
+            </div>
+        </div>
+
         <div>
-          <div style="font-weight:800;font-size:15px">${name}</div>
-          <div style="font-size:11px;color:var(--muted);font-weight:600">${v.sessions} buổi${v.ball?' + tiền banh':''}</div>
+            <table id="memberTable">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 50px;">STT</th>
+                        <th rowspan="2" class="col-group" style="width: 160px;">Họ và Tên</th>
+                        <th colspan="2" class="col-group" style="background-color: #0284c7;">Thứ 7</th>
+                        <th colspan="2" class="col-group" style="background-color: #b91c1c;">Chủ Nhật</th>
+                        <th rowspan="2" class="col-group">Tạm Thu<br><small>(Dự kiến)</small></th>
+                        <th rowspan="2">Chi phí T7<br><small>(Thực tế)</small></th>
+                        <th rowspan="2" class="col-group">Chi phí CN<br><small>(Thực tế)</small></th>
+                        <th rowspan="2" style="background-color: #ca8a04;">Tổng<br>Phải Đóng</th>
+                        <th rowspan="2">Còn<br>Phải Thu</th>
+                        <th rowspan="2">Xung Quỹ</th>
+                    </tr>
+                    <tr>
+                        <th>Dự kiến</th><th>Thực tế</th>
+                        <th>Dự kiến</th><th class="col-group">Thực tế</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; background-color: #e2e8f0;">
+                        <td colspan="2">Tổng cộng</td>
+                        <td></td><td class="col-group"></td>
+                        <td></td><td class="col-group"></td>
+                        <td id="totalTamThu" class="col-group">0</td>
+                        <td id="totalChiPhiT7">0</td>
+                        <td id="totalChiPhiCN" class="col-group">0</td>
+                        <td id="totalTongDong" style="background-color: #fef08a;">0</td>
+                        <td id="totalPhaiThu" class="highlight">0</td>
+                        <td id="totalXungQuy" class="highlight-green">0</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-family:'DM Mono',monospace;font-size:18px;color:var(--accent);font-weight:800">${fmt(Math.round(v.total))}</div>
-        <div class="${payments[name]?'paid':'unpaid'}">${payments[name]?'✓ Đã đóng':'⏳ Chưa đóng'}</div>
-      </div>
-    </div>`).join('');
-  renderBankDisp();renderCourtDisp();renderReceiptThumbs();
-}
-function togPay(name){cd().payments[name]=!cd().payments[name];save();renderPayments();}
 
-// ═══════════════════════════════════════
-// BANK INFO + QR
-// ═══════════════════════════════════════
-function saveBankInfo(){
-  state.bankInfo={acc:document.getElementById('bank-acc').value.trim(),name:document.getElementById('bank-name').value.trim(),bank:document.getElementById('bank-bank').value.trim()};
-  save();renderBankDisp();
-}
-function saveCourtInfo(){
-  state.courtInfo={acc:document.getElementById('court-acc').value.trim(),name:document.getElementById('court-name').value.trim(),bank:document.getElementById('court-bank').value.trim()};
-  save();renderCourtDisp();
-}
-function renderBankDisp(){
-  const info=state.bankInfo,el=document.getElementById('bank-disp');if(!el)return;
-  if(info?.acc){
-    el.innerHTML=`<div style="background:var(--accent-lt);border:1.5px solid #c4b5fd;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700">
-      🏦 <strong>${info.bank}</strong> &nbsp;|&nbsp; <strong style="font-family:'DM Mono',monospace">${info.acc}</strong> &nbsp;|&nbsp; <strong>${info.name}</strong></div>`;
-    document.getElementById('bank-acc').value=info.acc;document.getElementById('bank-name').value=info.name;document.getElementById('bank-bank').value=info.bank;
-    generateQR('my-qr-wrap',info,`Chuyển khoản cho: ${info.name}`,'var(--accent)');
-  } else el.innerHTML='';
-}
-function renderCourtDisp(){
-  const info=state.courtInfo,el=document.getElementById('court-disp');if(!el)return;
-  if(info?.acc){
-    el.innerHTML=`<div style="background:var(--accent4-lt);border:1.5px solid #ffd6e8;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700">
-      🏟 <strong>${info.bank}</strong> &nbsp;|&nbsp; <strong style="font-family:'DM Mono',monospace">${info.acc}</strong> &nbsp;|&nbsp; <strong>${info.name}</strong></div>`;
-    document.getElementById('court-acc').value=info.acc;document.getElementById('court-name').value=info.name;document.getElementById('court-bank').value=info.bank;
-    generateQR('court-qr-wrap',info,'Thanh toán tiền sân','#ff7eb3');
-  } else el.innerHTML='';
-}
-function generateQR(wrapperId, info, label, color){
-  const wrap=document.getElementById(wrapperId);if(!wrap)return;
-  // VietQR format
-  const amount=0; // dynamic, user will fill
-  const qrData=`https://img.vietqr.io/image/${bankCodeMap(info.bank)}-${info.acc}-compact2.png?addInfo=${encodeURIComponent(label)}&accountName=${encodeURIComponent(info.name)}`;
-  wrap.innerHTML=`<div class="qr-box">
-    <img src="${qrData}" width="180" height="180" style="border-radius:10px;border:2px solid var(--border)" onerror="this.parentElement.innerHTML='<canvas id=qr-canvas-${wrapperId}></canvas>'">
-    <div style="font-size:12px;font-weight:700;color:${color}">${label}</div>
-    <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">${info.acc} · ${info.bank}</div>
-    <div style="font-size:11px;color:var(--muted);font-weight:600">${info.name}</div>
-  </div>`;
-  // Fallback QR if VietQR fails
-  setTimeout(()=>{
-    const canvas=document.getElementById(`qr-canvas-${wrapperId}`);
-    if(canvas && typeof QRCode !== 'undefined') QRCode.toCanvas(canvas,`${info.bank}|${info.acc}|${info.name}`,{width:160,margin:1});
-  },500);
-}
-function bankCodeMap(name){
-  const n=(name||'').toLowerCase();
-  if(n.includes('techcom')||n.includes('tcb')) return 'TCB';
-  if(n.includes('vietcom')||n.includes('vcb')) return 'VCB';
-  if(n.includes('mb')||n.includes('quân đội')||n.includes('quan doi')) return 'MB';
-  if(n.includes('acb')) return 'ACB';
-  if(n.includes('tpbank')||n.includes('tp bank')) return 'TPB';
-  if(n.includes('vpbank')||n.includes('vp bank')) return 'VPB';
-  if(n.includes('vietinbank')) return 'ICB';
-  if(n.includes('agribank')) return 'AGR';
-  if(n.includes('bidv')) return 'BIDV';
-  if(n.includes('sacombank')) return 'STB';
-  return 'TCB'; // default
-}
-
-// ═══════════════════════════════════════
-// RECEIPTS (local base64)
-// ═══════════════════════════════════════
-function handleReceiptUpload(event){
-  const files=[...event.target.files];
-  files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      receipts.push({id:Date.now()+Math.random(),dataUrl:e.target.result,name:file.name,month:curMonth});
-      saveReceipts();renderReceiptThumbs();
-    };
-    reader.readAsDataURL(file);
-  });
-  event.target.value='';
-}
-function saveReceipts(){try{localStorage.setItem('tennis_receipts_v1',JSON.stringify(receipts));}catch(e){alert('Ảnh quá lớn, không thể lưu. Hãy thử ảnh nhỏ hơn.');}}
-function renderReceiptThumbs(){
-  const el=document.getElementById('receipt-thumbs');if(!el)return;
-  const monthReceipts=receipts.filter(r=>r.month===curMonth||!r.month);
-  if(!monthReceipts.length){el.innerHTML='';return;}
-  el.innerHTML=monthReceipts.map(r=>`
-    <div class="receipt-thumb">
-      <img src="${r.dataUrl}" title="${r.name}" onclick="previewImg('${r.dataUrl}')">
-      <button class="del-btn" onclick="deleteReceipt(${r.id})">×</button>
-    </div>`).join('');
-}
-function deleteReceipt(id){receipts=receipts.filter(r=>r.id!==id);saveReceipts();renderReceiptThumbs();}
-function previewImg(src){document.getElementById('img-modal-src').src=src;document.getElementById('img-modal').style.display='flex';}
-
-// ═══════════════════════════════════════
-// SUMMARY PDF
-// ═══════════════════════════════════════
-function renderSummaryPDF(){
-  if(!document.getElementById('tab-summary').classList.contains('active'))return;
-  const totals=calcSplit();
-  const active=Object.entries(totals).filter(([,v])=>v.sessions>0||v.ball>0).sort((a,b)=>b[1].total-a[1].total);
-  const payments=cd().payments;
-  const sessions=cd().sessions;
-  const grandTotal=active.reduce((s,[,v])=>s+v.total,0);
-  const info=state.bankInfo||{};
-  const courtInfo=state.courtInfo||{};
-
-  const vietQRUrl=info.acc?`https://img.vietqr.io/image/${bankCodeMap(info.bank)}-${info.acc}-compact2.png?addInfo=${encodeURIComponent(fmtMonth(curMonth))}&accountName=${encodeURIComponent(info.name||'')}`:null;
-
-  const personRows=active.map(([name,v])=>`
-    <div class="pdf-person-row">
-      <div>
-        <div class="pdf-person-name">${name}</div>
-        <div style="font-size:12px;color:var(--muted);font-weight:600">${v.sessions} buổi${v.ball?' + banh':''}${payments[name]?' · ✓ Đã đóng':''}</div>
-      </div>
-      <div class="pdf-person-amount">${fmt(Math.round(v.total))}</div>
-    </div>`).join('');
-
-  const sessionRows=sessions.map(s=>{
-    const n=s.players.length,cpp=(s.courtFee+s.coachFee)/n,tpp=s.tip/n,ppp=(s.parkTotal||0)/n;
-    return `<div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div>
-          <span style="font-weight:800;color:var(--accent)">${fmtDate(s.date)} ${s.day}</span>
-          <span style="margin-left:8px;font-size:13px;color:var(--muted)">${s.time}</span>
-          <span class="tag ${s.hasCoach?'tc':'tnc'}" style="margin-left:6px">${s.hasCoach?'Có thầy':'Không thầy'}</span>
+        <div class="add-member-box">
+            <input type="text" id="newMemberName" placeholder="Nhập tên người mới...">
+            <button class="btn-add" onclick="addMember()">+ Thêm Người</button>
         </div>
-        <span style="font-family:'DM Mono',monospace;font-weight:800;color:var(--accent)">${fmt(s.total)}</span>
-      </div>
-      <table style="width:100%;font-size:12px"><thead><tr>
-        <th style="text-align:left;padding:4px 8px;color:var(--muted);font-size:11px">Người chơi</th>
-        <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:11px">Sân+Thầy</th>
-        <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:11px">Tip</th>
-        <th style="text-align:right;padding:4px 8px;color:var(--muted);font-size:11px">Xe</th>
-        <th style="text-align:right;padding:4px 8px;color:var(--accent);font-size:11px">Cộng</th>
-      </tr></thead><tbody>
-      ${s.players.map(p=>`<tr>
-        <td style="padding:3px 8px;font-weight:700">${p}</td>
-        <td style="text-align:right;padding:3px 8px;font-family:'DM Mono',monospace">${fmt(Math.round(cpp))}</td>
-        <td style="text-align:right;padding:3px 8px;font-family:'DM Mono',monospace">${tpp?fmt(Math.round(tpp)):'—'}</td>
-        <td style="text-align:right;padding:3px 8px;font-family:'DM Mono',monospace">${ppp?fmt(Math.round(ppp)):'—'}</td>
-        <td style="text-align:right;padding:3px 8px;font-family:'DM Mono',monospace;color:var(--accent);font-weight:800">${fmt(Math.round(cpp+tpp+ppp))}</td>
-      </tr>`).join('')}
-      </tbody></table></div>`;
-  }).join('');
 
-  document.getElementById('pdf-preview').innerHTML=`
-    <div class="pdf-header">
-      <div style="font-size:28px;margin-bottom:6px">🎾</div>
-      <h1>Bảng Quyết Toán Tennis</h1>
-      <p>${fmtMonth(curMonth)} &nbsp;·&nbsp; Tổng: <strong>${fmt(grandTotal)} VNĐ</strong> &nbsp;·&nbsp; ${sessions.length} buổi tập</p>
+        <button class="btn" onclick="saveAndCalculate()">Chốt Sổ & Lưu Lên Đám Mây</button>
+        <span class="warning">*Bạn có thể dùng hai ngón tay phóng to/thu nhỏ trang web tự do trên điện thoại hoặc máy tính bảng để xem toàn cảnh.</span>
     </div>
 
-    <div class="pdf-section">
-      <h3>💰 Số tiền từng người cần đóng</h3>
-      ${personRows}
-      <div style="background:var(--accent-lt);border:2px solid var(--accent);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <span style="font-weight:800;font-size:15px;color:var(--accent)">📊 TỔNG CỘNG</span>
-        <span style="font-family:'DM Mono',monospace;font-size:20px;font-weight:800;color:var(--accent)">${fmt(grandTotal)} VNĐ</span>
-      </div>
-    </div>
+    <script>
+        // --- CẤU HÌNH LIÊN KẾT DATABASE ONLINE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtryxy-eM2Gia6b1g-0Y6RtBXCIg8MW3c",
+            authDomain: "quy-cau-long.firebaseapp.com",
+            databaseURL: "https://quy-cau-long-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "quy-cau-long",
+            storageBucket: "quy-cau-long.firebasestorage.app",
+            messagingSenderId: "326193816949",
+            appId: "1:326193816949:web:a7bd9e5f5b9019981e1f3c",
+            measurementId: "G-TL7LWER43Q"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    ${info.acc?`
+        // DEFAULT members chỉ dùng khi tạo tuần mới hoàn toàn chưa có dữ liệu
+        const DEFAULT_MEMBERS = ["C Thúy", "A Tâm", "Henry", "C Thảo", "A Chinh", "Hiếu", "Khánh", "Phương", "Quý", "Kiệt", "Vi", "Ninh", "C Tuyết"];
+
+        let cloudData = { records: {}, bankInfo: { id: "", account: "", name: "" } };
+        let currentKey = '1_1';
+        // currentMembers là danh sách thành viên CỦA TUẦN HIỆN TẠI (độc lập)
+        let currentMembers = [];
+
+        const formatVND = (num) => Math.round(num).toLocaleString('en-US');
+        const parseNum = (val) => {
+            if (!val) return 0;
+            if (typeof val === 'string') return parseInt(val.replace(/[^0-9]/g, '')) || 0;
+            return parseInt(val) || 0;
+        };
+
+        function formatInput(input) {
+            let cursorPosition = input.selectionStart;
+            let originalLength = input.value.length;
+            let num = parseNum(input.value);
+            if (num === 0 && input.value === '') { input.value = ''; calculate(); return; }
+            input.value = formatVND(num);
+            input.setSelectionRange(cursorPosition + (input.value.length - originalLength), cursorPosition + (input.value.length - originalLength));
+            calculate();
+        }
+
+        function getKeyParts(key) {
+            const parts = key.split('_');
+            return { m: parseInt(parts[0]), w: parseInt(parts[1]) };
+        }
+
+        // Lấy key của tuần trước liền kề
+        function getPreviousKey(key) {
+            const { m, w } = getKeyParts(key);
+            if (w > 1) return m + '_' + (w - 1);
+            if (m === 1) return null;
+            // Tháng trước, tìm tuần cuối có dữ liệu
+            const prevM = m - 1;
+            for (let wk = 5; wk >= 1; wk--) {
+                const k = prevM + '_' + wk;
+                if (cloudData.records[k]) return k;
+            }
+            return prevM + '_1';
+        }
+
+        function loadData() {
+            const m = document.getElementById('monthSelect').value;
+            const w = document.getElementById('weekSelect').value;
+            currentKey = m + '_' + w;
+            
+            showStatus("Đang tải dữ liệu từ đám mây...", "#e0f2fe", "#0369a1");
+
+            db.ref('badminton_app').once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (data.records) cloudData.records = data.records;
+                    if (data.bankInfo) cloudData.bankInfo = data.bankInfo;
+                }
+                
+                if (cloudData.bankInfo) {
+                    document.getElementById('bankId').value = cloudData.bankInfo.id || "";
+                    document.getElementById('bankAccount').value = cloudData.bankInfo.account || "";
+                    document.getElementById('bankName').value = cloudData.bankInfo.name || "";
+                }
+
+                // Nếu tuần này chưa có dữ liệu → tạo mới với DEFAULT_MEMBERS
+                if (!cloudData.records[currentKey]) {
+                    cloudData.records[currentKey] = {
+                        costs: { fee: 50000, sanT7: 0, cauT7: 0, khacT7: 0, sanCN: 0, cauCN: 0, khacCN: 0 },
+                        fundExpense: 0,
+                        fundClosingBalance: 0,
+                        members: [...DEFAULT_MEMBERS],
+                        membersData: {}
+                    };
+                } else {
+                    // Tương thích ngược: nếu record cũ chưa có members thì gán DEFAULT
+                    if (!cloudData.records[currentKey].members) {
+                        cloudData.records[currentKey].members = [...DEFAULT_MEMBERS];
+                    }
+                }
+
+                currentMembers = [...cloudData.records[currentKey].members];
+
+                renderUIElements();
+                updateQRCode();
+                updateCopyButton();
+                showStatus("Đã kết nối đám mây trực tuyến", "#dcfce7", "#15803d");
+            }).catch(err => {
+                console.error(err);
+                showStatus("Lỗi kết nối mạng!", "#fee2e2", "#b91c1c");
+            });
+        }
+
+        // Cập nhật trạng thái nút Copy
+        function updateCopyButton() {
+            const btn = document.getElementById('btnCopyPrev');
+            const prevKey = getPreviousKey(currentKey);
+            if (prevKey && cloudData.records[prevKey]) {
+                btn.disabled = false;
+                const { m, w } = getKeyParts(prevKey);
+                btn.title = `Sao chép danh sách và chi phí từ Tuần ${w} Tháng ${m}`;
+            } else {
+                btn.disabled = true;
+                btn.title = 'Không có dữ liệu tuần trước để copy';
+            }
+        }
+
+        // Hàm copy từ tuần trước liền kề
+        function copyFromPreviousWeek() {
+            const prevKey = getPreviousKey(currentKey);
+            if (!prevKey || !cloudData.records[prevKey]) {
+                alert('Không tìm thấy dữ liệu tuần trước để copy!');
+                return;
+            }
+
+            const { m, w } = getKeyParts(prevKey);
+            const prevRecord = cloudData.records[prevKey];
+
+            const confirmMsg = `Copy danh sách thành viên và chi phí từ Tuần ${w} Tháng ${m} về tuần này?\n\n⚠️ Dữ liệu hiện tại của tuần này sẽ bị ghi đè.\n(Các tích chọn Dự kiến/Thực tế sẽ được reset về trống)`;
+            if (!confirm(confirmMsg)) return;
+
+            // Copy members (danh sách tên)
+            const copiedMembers = prevRecord.members ? [...prevRecord.members] : [...DEFAULT_MEMBERS];
+
+            // Copy chi phí, reset check-box thành viên
+            const newMembersData = {};
+            copiedMembers.forEach(name => {
+                newMembersData[name] = { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
+            });
+
+            const prevCosts = prevRecord.costs || {};
+
+            cloudData.records[currentKey] = {
+                costs: {
+                    fee: prevCosts.fee || 50000,
+                    sanT7: prevCosts.sanT7 || 0,
+                    cauT7: prevCosts.cauT7 || 0,
+                    khacT7: prevCosts.khacT7 || 0,
+                    sanCN: prevCosts.sanCN || 0,
+                    cauCN: prevCosts.cauCN || 0,
+                    khacCN: prevCosts.khacCN || 0
+                },
+                fundExpense: 0,
+                fundClosingBalance: 0,
+                members: copiedMembers,
+                membersData: newMembersData
+            };
+
+            currentMembers = [...copiedMembers];
+            renderUIElements();
+            saveToCloudSilent();
+            alert(`✅ Đã copy danh sách ${copiedMembers.length} thành viên và chi phí từ Tuần ${w} Tháng ${m}!`);
+        }
+
+        function updateQRCode() {
+            const bankId = document.getElementById('bankId').value.trim().toUpperCase();
+            const bankAccount = document.getElementById('bankAccount').value.trim();
+            const bankName = encodeURIComponent(document.getElementById('bankName').value.trim());
+            const qrContainer = document.getElementById('qrContainer');
+
+            if (bankId && bankAccount && bankName) {
+                const qrUrl = `https://img.vietqr.io/image/${bankId}-${bankAccount}-compact.png?accountName=${bankName}`;
+                qrContainer.innerHTML = `<img src="${qrUrl}" alt="Mã VietQR chuyển khoản">`;
+            } else {
+                qrContainer.innerHTML = `<span>Vui lòng điền thông tin tài khoản bên cạnh để tạo mã QR</span>`;
+            }
+        }
+
+        function renderUIElements() {
+            const record = cloudData.records[currentKey];
+            const c = record.costs;
+
+            document.getElementById('feePerSession').value = formatVND(c.fee);
+            document.getElementById('sanT7').value = formatVND(c.sanT7);
+            document.getElementById('cauT7').value = formatVND(c.cauT7);
+            document.getElementById('khacT7').value = formatVND(c.khacT7);
+            document.getElementById('sanCN').value = formatVND(c.sanCN);
+            document.getElementById('cauCN').value = formatVND(c.cauCN);
+            document.getElementById('khacCN').value = formatVND(c.khacCN);
+            document.getElementById('fundExpense').value = formatVND(record.fundExpense || 0);
+
+            const tbody = document.querySelector('#memberTable tbody');
+            tbody.innerHTML = '';
+            
+            currentMembers.forEach((name, i) => {
+                const md = record.membersData[name] || { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="col-group" style="text-align: left; padding-left: 10px;">
+                            <strong>${name}</strong>
+                            <button class="btn-remove" title="Xóa" onclick="removeMember('${name}')">X</button>
+                        </td>
+                        <td><input type="checkbox" id="dkT7_${i}" ${md.dkT7 ? 'checked' : ''} onchange="calculate()"></td>
+                        <td><input type="checkbox" id="ttT7_${i}" ${md.ttT7 ? 'checked' : ''} onchange="calculate()"></td>
+                        <td><input type="checkbox" id="dkCN_${i}" ${md.dkCN ? 'checked' : ''} onchange="calculate()"></td>
+                        <td class="col-group"><input type="checkbox" id="ttCN_${i}" ${md.ttCN ? 'checked' : ''} onchange="calculate()"></td>
+                        <td class="col-group" id="tamthu_${i}" style="background:#f1f5f9; font-weight:bold;">0</td>
+                        <td id="chiphiT7_${i}" style="color: #0284c7;">0</td>
+                        <td class="col-group" id="chiphiCN_${i}" style="color: #b91c1c;">0</td>
+                        <td id="tongdong_${i}" style="font-weight: bold; background-color: #fef08a;">0</td>
+                        <td id="phaithu_${i}" class="highlight">0</td>
+                        <td id="xungquy_${i}" class="highlight-green">0</td>
+                    </tr>
+                `;
+            });
+            calculate();
+        }
+
+        function getPreviousWeekClosingBalance() {
+            const prevKey = getPreviousKey(currentKey);
+            if (!prevKey) return 0;
+            if (cloudData.records[prevKey] && cloudData.records[prevKey].fundClosingBalance !== undefined) {
+                return cloudData.records[prevKey].fundClosingBalance;
+            }
+            return 0;
+        }
+
+        function captureCurrentState() {
+            if (!cloudData.records[currentKey]) return;
+            cloudData.records[currentKey].costs = {
+                fee: parseNum(document.getElementById('feePerSession').value),
+                sanT7: parseNum(document.getElementById('sanT7').value),
+                cauT7: parseNum(document.getElementById('cauT7').value),
+                khacT7: parseNum(document.getElementById('khacT7').value),
+                sanCN: parseNum(document.getElementById('sanCN').value),
+                cauCN: parseNum(document.getElementById('cauCN').value),
+                khacCN: parseNum(document.getElementById('khacCN').value),
+            };
+            cloudData.records[currentKey].fundExpense = parseNum(document.getElementById('fundExpense').value);
+            // Lưu danh sách thành viên của tuần này (độc lập)
+            cloudData.records[currentKey].members = [...currentMembers];
+
+            cloudData.bankInfo = {
+                id: document.getElementById('bankId').value.trim().toUpperCase(),
+                account: document.getElementById('bankAccount').value.trim(),
+                name: document.getElementById('bankName').value.trim()
+            };
+
+            cloudData.records[currentKey].membersData = cloudData.records[currentKey].membersData || {};
+            currentMembers.forEach((name, i) => {
+                const elDkT7 = document.getElementById(`dkT7_${i}`);
+                if (elDkT7) {
+                    cloudData.records[currentKey].membersData[name] = {
+                        dkT7: elDkT7.checked, ttT7: document.getElementById(`ttT7_${i}`).checked,
+                        dkCN: document.getElementById(`dkCN_${i}`).checked, ttCN: document.getElementById(`ttCN_${i}`).checked
+                    };
+                }
+            });
+        }
+
+        function addMember() {
+            const name = document.getElementById('newMemberName').value.trim();
+            if (!name) return;
+            if (currentMembers.includes(name)) { alert('Tên đã tồn tại trong tuần này!'); return; }
+            captureCurrentState();
+            currentMembers.push(name);
+            cloudData.records[currentKey].members = [...currentMembers];
+            if (!cloudData.records[currentKey].membersData[name]) {
+                cloudData.records[currentKey].membersData[name] = { dkT7: false, ttT7: false, dkCN: false, ttCN: false };
+            }
+            document.getElementById('newMemberName').value = '';
+            saveToCloudSilent();
+        }
+
+        function removeMember(name) {
+            if (!confirm(`Bạn có chắc muốn xóa "${name}" khỏi tuần này?`)) return;
+            captureCurrentState();
+            currentMembers = currentMembers.filter(n => n !== name);
+            cloudData.records[currentKey].members = [...currentMembers];
+            saveToCloudSilent();
+        }
+
+        function saveAndCalculate() {
+            captureCurrentState();
+            showStatus("Đang lưu lên đám mây...", "#fef08a", "#a16207");
+            
+            db.ref('badminton_app').set({
+                records: cloudData.records,
+                bankInfo: cloudData.bankInfo
+            }).then(() => {
+                calculate();
+                showStatus("Đã kết nối đám mây trực tuyến", "#dcfce7", "#15803d");
+                alert(`Đã chốt sổ và lưu thông tin lên Cloud thành công!`);
+            }).catch(err => {
+                alert("Lưu thất bại, kiểm tra mạng!");
+            });
+        }
+
+        function saveToCloudSilent() {
+            db.ref('badminton_app').set({
+                records: cloudData.records,
+                bankInfo: cloudData.bankInfo
+            }).then(() => { renderUIElements(); });
+        }
+
+        function calculate() {
+            const fee = parseNum(document.getElementById('feePerSession').value);
+            const totalT7 = parseNum(document.getElementById('sanT7').value) + parseNum(document.getElementById('cauT7').value) + parseNum(document.getElementById('khacT7').value);
+            const totalCN = parseNum(document.getElementById('sanCN').value) + parseNum(document.getElementById('cauCN').value) + parseNum(document.getElementById('khacCN').value);
+            
+            document.getElementById('tongT7').innerText = formatVND(totalT7);
+            document.getElementById('tongCN').innerText = formatVND(totalCN);
+
+            let actT7 = 0, actCN = 0;
+            currentMembers.forEach((name, i) => {
+                if (document.getElementById(`ttT7_${i}`) && document.getElementById(`ttT7_${i}`).checked) actT7++;
+                if (document.getElementById(`ttCN_${i}`) && document.getElementById(`ttCN_${i}`).checked) actCN++;
+            });
+
+            const bqT7 = actT7 > 0 ? Math.ceil((totalT7 / actT7) / 1000) * 1000 : 0;
+            const bqCN = actCN > 0 ? Math.ceil((totalCN / actCN) / 1000) * 1000 : 0;
+
+            document.getElementById('sisoT7').innerText = actT7 + " người";
+            document.getElementById('bqT7').innerText = formatVND(bqT7);
+            document.getElementById('sisoCN').innerText = actCN + " người";
+            document.getElementById('bqCN').innerText = formatVND(bqCN);
+
+            let tTamThu = 0, tChiT7 = 0, tChiCN = 0, tTongDong = 0, tPhaiThu = 0, tXungQuy = 0;
+
+            currentMembers.forEach((name, i) => {
+                const elDkT7 = document.getElementById(`dkT7_${i}`);
+                if (!elDkT7) return;
+
+                let tamThu = (elDkT7.checked ? fee : 0) + (document.getElementById(`dkCN_${i}`).checked ? fee : 0);
+                let cT7 = document.getElementById(`ttT7_${i}`).checked ? bqT7 : 0;
+                let cCN = document.getElementById(`ttCN_${i}`).checked ? bqCN : 0;
+                let tDong = cT7 + cCN;
+                let bal = tamThu - tDong;
+
+                tTamThu += tamThu; tChiT7 += cT7; tChiCN += cCN; tTongDong += tDong;
+                if (bal < 0) tPhaiThu += Math.abs(bal); else tXungQuy += bal;
+
+                document.getElementById(`tamthu_${i}`).innerText = formatVND(tamThu);
+                document.getElementById(`chiphiT7_${i}`).innerText = cT7 ? formatVND(cT7) : "-";
+                document.getElementById(`chiphiCN_${i}`).innerText = cCN ? formatVND(cCN) : "-";
+                document.getElementById(`tongdong_${i}`).innerText = formatVND(tDong);
+                document.getElementById(`phaithu_${i}`).innerText = bal < 0 ? formatVND(Math.abs(bal)) : "0";
+                document.getElementById(`xungquy_${i}`).innerText = bal > 0 ? formatVND(bal) : "0";
+            });
+
+            document.getElementById('totalTamThu').innerText = formatVND(tTamThu);
+            document.getElementById('totalChiPhiT7').innerText = formatVND(tChiT7);
+            document.getElementById('totalChiPhiCN').innerText = formatVND(tChiCN);
+            document.getElementById('totalTongDong').innerText = formatVND(tTongDong);
+            document.getElementById('totalPhaiThu').innerText = formatVND(tPhaiThu);
+            document.getElementById('totalXungQuy').innerText = formatVND(tXungQuy);
+
+            let opening = getPreviousWeekClosingBalance();
+            let fundExpense = parseNum(document.getElementById('fundExpense').value);
+            let closing = opening + tXungQuy - fundExpense;
+
+            document.getElementById('fundOpening').innerText = formatVND(opening);
+            document.getElementById('fundIncome').innerText = formatVND(tXungQuy);
+            document.getElementById('fundClosing').innerText = formatVND(closing);
+
+            if (cloudData.records[currentKey]) cloudData.records[currentKey].fundClosingBalance = closing;
+        }
+
+        function showStatus(text, bg, color) {
+            const el = document.getElementById('syncStatus');
+            el.innerText = text; el.style.background = bg; el.style.color = color; el.style.display = 'inline-block';
+        }
+
+        const currentMonth = new Date().getMonth() + 1;
+        document.getElementById('monthSelect').value = currentMonth;
+        loadData();
+    </script>
+
+</body>
+</html>
